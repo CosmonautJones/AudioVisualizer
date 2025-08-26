@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "supabase": {
+      "command": "supabase-mcp",
+      "env": {
+        "SUPABASE_URL": "https://your.supabase.co",
+        "SUPABASE_SERVICE_ROLE_KEY": "env:SUPABASE_SERVICE_ROLE_KEY"
+      }
+    }
+  }
+}
