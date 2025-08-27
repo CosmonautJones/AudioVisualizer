@@ -1,0 +1,59 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(C:\\Users\\travi\\Desktop\\Projects\\audio-visualizer\\.claude/**)",
+      "Read(C:\\Users\\travi\\Desktop\\Projects\\audio-visualizer/**)",
+      "Read(C:\\Users\\travi\\Desktop\\Projects\\audio-visualizer\\.claude/**)",
+      "Read(C:\\Users\\travi\\Desktop\\Projects\\audio-visualizer/**)",
+      "Read(C:\\Users\\travi\\Desktop\\Projects\\audio-visualizer\\.claude/**)",
+      "Read(C:\\Users\\travi\\Desktop\\Projects\\audio-visualizer\\.claude\\agents/**)",
+      "Bash(pwd)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git status)",
+      "Bash(git branch:*)",
+      "Bash(git switch:*)",
+      "Bash(grep:*)",
+      "mcp_ide_getDiagnostics",
+      "mcp_ide_applyEdit",
+      "mcp_ide_readFile",
+      "mcp_ide_writeFile",
+      "Read(C:\\Users\\travi\\Desktop\\Projects\\audio-visualizer\\.claude\\agents/**)",
+      "Read(C:\\Users\\travi\\Desktop\\Projects\\audio-visualizer\\.claude\\commands/**)",
+      "Bash(git switch:*)",
+      "Read(C:\\Users\\travi\\Desktop\\Projects\\audio-visualizer\\)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(find:*)",
+      "Bash(npm run preview:*)",
+      "Read(C:\\Users\\travi\\Desktop\\Projects\\audio-visualizer\\.claude\\agents/**)",
+      "Read(C:\\Users\\travi\\.claude/**)",
+      "Read(C:\\Users\\travi/**)",
+      "Bash(copy:*)",
+      "Bash(xcopy:*)",
+      "Bash(timeout 5 npm run dev)",
+      "Bash(npm run lint)"
+    ],
+    "deny": [
+      "Bash(sudo:*)",
+      "Bash(rm -rf *)",
+      "Bash(chmod:*)",
+      "Bash(chown:*)",
+      "Bash(reboot:*)",
+      "Bash(shutdown:*)"
+    ],
+    "ask": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git merge:*)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\travi\\.claude\\agents"
+    ]
+  }
+}

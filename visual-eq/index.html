@@ -4,10 +4,79 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
+    <title>Visual Equalizer - MVP</title>
+    <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="app" class="app">
+      <!-- Header -->
+      <header class="header">
+        <h1>Visual Equalizer</h1>
+        <p id="status-message" class="status"></p>
+      </header>
+
+      <!-- Control Panel -->
+      <aside class="controls">
+        <!-- Input Selector -->
+        <div class="control-group">
+          <label>Audio Source:</label>
+          <div id="input-selector" class="input-selector">
+            <label>
+              <input type="radio" name="source" value="mic" checked /> Microphone
+            </label>
+            <label>
+              <input type="radio" name="source" value="file" /> Audio File
+            </label>
+          </div>
+          <input type="file" id="file-input" accept="audio/*,.mp3,.wav,.ogg,.aac,.flac,.m4a" style="display: none;" />
+          <div id="file-upload-area" class="file-upload-area" style="display: none;">
+            <div class="drag-drop-area" id="drag-drop-area">
+              <button id="browse-file" type="button" class="browse-button">
+                📁 Choose Audio File
+              </button>
+              <p class="file-hint">or drag and drop an audio file here</p>
+              <p class="file-formats">MP3, WAV, OGG, AAC, FLAC, M4A supported</p>
+            </div>
+          </div>
+          <div id="file-info" class="file-info" style="display: none;">
+            <span id="file-name"></span>
+            <button id="change-file" type="button">Change File</button>
+          </div>
+        </div>
+
+        <!-- Sensitivity Control -->
+        <div class="control-group">
+          <label for="sensitivity-slider">Sensitivity:</label>
+          <input type="range" id="sensitivity-slider" min="0.1" max="3.0" step="0.1" value="1.0" />
+          <span class="slider-value">1.0</span>
+        </div>
+
+        <!-- Bar Count Control -->
+        <div class="control-group">
+          <label for="bar-count-slider">Bars:</label>
+          <input type="range" id="bar-count-slider" min="16" max="128" step="8" value="64" />
+          <span class="slider-value">64</span>
+        </div>
+
+        <!-- Theme Toggle -->
+        <div class="control-group">
+          <label>
+            <input type="checkbox" id="theme-toggle" /> Dark Theme
+          </label>
+        </div>
+
+        <!-- Playback Control -->
+        <div class="control-group">
+          <button id="playback-button">🎤 Start</button>
+        </div>
+      </aside>
+
+      <!-- Main Visualization Area -->
+      <main class="visualizer">
+        <canvas id="visualizer" width="800" height="450"></canvas>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

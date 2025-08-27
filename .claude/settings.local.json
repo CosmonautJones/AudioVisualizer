@@ -1,14 +1,37 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir)",
-      "Bash(npx tsc:*)",
-      "Bash(npm run build:*)",
+      "Bash(pwd)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(npm install:*)",
       "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git status)",
+      "Bash(git branch:*)",
+      "Bash(git switch:*)",
+      "Bash(grep:*)",
+      "mcp_ide_getDiagnostics",
+      "mcp_ide_applyEdit",
+      "mcp_ide_readFile",
+      "mcp_ide_writeFile",
       "mcp__ide__getDiagnostics",
-      "Bash(grep:*)"
+      "Bash(git log:*)",
+      "Bash(git add:*)"
     ],
-    "deny": [],
-    "ask": []
+    "deny": [
+      "Bash(sudo:*)",
+      "Bash(rm -rf *)",
+      "Bash(chmod:*)",
+      "Bash(chown:*)",
+      "Bash(reboot:*)",
+      "Bash(shutdown:*)"
+    ],
+    "ask": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git merge:*)"
+    ]
   }
 }
