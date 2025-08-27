@@ -1,46 +1,145 @@
-# CLAUDE.md
+Title: Audio-Visualizer MVP — One-Sweep Build Plan
+Owner: Travis Jones
+Agent: Claude Code (follow this document verbatim)
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+0) Mission & Definition of Done
 
-## Project Overview
+Goal: Ship a minimal, smooth 60fps browser visualizer driven by the Web Audio API, with one page, one graph, one control panel.
+Done when:
 
-Visual Equalizer - React + TypeScript + Vite app that renders a smooth bar equalizer reacting to audio using Web Audio API + Canvas 2D.
+User can choose Mic or Audio File input.
 
-## Commands
+Visual renders frequency bars on <canvas> at ≥ 55fps typical desktop.
 
-Work in the `visual-eq/` directory:
-```bash
-npm run dev          # Start development server
-npm run build        # TypeScript compile + Vite build
-npm run lint         # Run ESLint
-```
+Basic controls work: Input select, Sensitivity (gain), Bar count, Theme (light/dark), Pause/Resume.
 
-## Architecture
+Build runs with npm run dev and static export via npm run build served from dist/.
 
-**Tech Stack:** React 19 + TypeScript + Vite, Canvas 2D, Web Audio API (AudioContext, AnalyserNode, getByteFrequencyData)
+No console errors; Lighthouse Performance ≥ 90 local.
 
-**Main Code:** `visual-eq/src/` with strict TypeScript config
+1) Constraints & Guardrails
 
-## MVP Requirements
+Keep stack simple: Vite + TypeScript + Web Audio API + Canvas 2D (no React for MVP).
 
-**Core Features:**
-- Upload audio file OR use microphone input
-- Real-time bar equalizer visualization on canvas
-- Basic controls: file picker, mic toggle, sensitivity, smoothing, bar count
+No persistence, no routing, no auth.
 
-**Performance:**
-- 60 FPS target using `requestAnimationFrame`
-- Avoid allocations in render loop
-- Mobile-safe: handle autoplay permissions, resume AudioContext on user gesture
+Accessibility: keyboard operable controls; high-contrast theme option.
 
-**UI:**
-- Dark theme, responsive canvas
-- Minimal interface focused on the visualizer
+Performance budget: main thread ≤ 8ms per frame.
 
-**Done = Shippable:**
-- Audio plays → bars react smoothly
-- All controls functional
-- Canvas resizes with window
+Security: user-gesture required before mic capture; handle permission errors gracefully.
+
+2) Architecture (MVP)
+/src
+  /audio
+    audioEngine.ts      // getUserMedia/file input → AudioContext → AnalyserNode
+    types.ts
+  /viz
+    renderer.ts         // canvas init & draw loop (requestAnimationFrame)
+    themes.ts           // light/dark palettes
+  /ui
+    controls.ts         // wire up sliders, buttons, select
+  main.ts               // bootstrap: wire audio ↔ viz ↔ ui
+index.html              // canvas + control panel
+styles.css              // minimal styling
 
 
-- Always use descriptive variable names
+Signal path: Input → GainNode(sensitivity) → AnalyserNode(fftSize configurable) → Uint8Array → renderer.drawBars().
+
+3) Milestones (Claude, execute in order)
+
+Scaffold
+
+Init Vite TS: npm create vite@latest av-mvp -- --template vanilla-ts
+
+Add minimal index.html, styles.css, main.ts.
+
+Audio layer
+
+Implement audioEngine.ts with:
+
+initAudioFromMic() and initAudioFromFile(file: File)
+
+setSensitivity(multiplier: number)
+
+getFrequencyBinCount() & readFrequencyData(target: Uint8Array)
+
+Renderer
+
+renderer.ts: canvas sizing (devicePixelRatio aware), bar layout, frame loop, FPS guard (skip frame if > 12ms last paint).
+
+UI controls
+
+controls.ts: bind inputs; dispatch settings to audio/renderer; pause/resume toggle.
+
+Glue
+
+main.ts: boot sequence, permission prompts, fallback messages.
+
+Perf & polish
+
+Throttle resize, memo gradients, avoid GC in loop (reuse arrays), precompute bar x/width.
+
+Build & verify
+
+npm run dev, npm run build; serve dist and run quick Lighthouse.
+
+4) Tasks & Acceptance Tests
+
+T1 Scaffold → AT: npm run dev serves a blank page without errors.
+
+T2 Mic input → AT: mic permission dialog; bars react to speaking.
+
+T3 File input → AT: choose .mp3/.wav; playback + visualization sync.
+
+T4 Controls → AT: sliders visibly change density/sensitivity; theme toggles; pause stops draw loop.
+
+T5 Performance → AT: Chrome FPS meter ≈ 60; no allocations inside loop (Performance panel).
+
+T6 Build → AT: dist/ works via static server; no console errors.
+
+5) Implementation Notes
+
+Use AnalyserNode.fftSize = 2048 by default; expose 512–4096 in UI.
+
+Pre-allocate Uint8Array once: const bins = new Uint8Array(analyser.frequencyBinCount).
+
+Device pixel ratio: canvas.width = clientWidth * dpr; canvas.height = clientHeight * dpr; ctx.scale(dpr, dpr).
+
+Bars: map ~64–128 bars across width; average buckets from bins to bar count.
+
+Avoid style/layout thrash: single ctx.fillRect loop; precomputed x/width.
+
+Handle mic denial: show inline message and enable file fallback.
+
+6) Commands Claude May Run
+
+Safe reads/build: npm install, npm run dev, npm run build, npx tsc --noEmit, git status, git switch -c, git commit -m, git push (ask first).
+
+Diagnostics: grep -n, cat, ls, mcp_ide_getDiagnostics, mcp_ide_applyEdit.
+
+7) Risks & Mitigations
+
+Mic permissions denied → Fallback to file input with visible prompt.
+
+Frame drops → Reduce bar count; cache gradients; lower fftSize.
+
+Clipping/loud input → Sensitivity slider adjusts GainNode; clamp values 0.1–3.0.
+
+Mobile quirks → Gate AudioContext resume on user gesture; test on iOS Safari.
+
+8) Non-Goals (defer)
+
+Shaders/WebGL, 3D, presets, timeline recording, export to video, multiple visual modes.
+
+9) Review Checklist (Claude, complete before closing PR)
+
+ All ATs pass
+
+ No any in exported types
+
+ No allocations in render loop
+
+ ESLint/Prettier clean
+
+ README quickstart updated
