@@ -2,6 +2,41 @@ Title: Audio-Visualizer MVP — One-Sweep Build Plan
 Owner: Travis Jones
 Agent: Claude Code (follow this document verbatim)
 
+# Claude Contract — Read-First, Write-Back, Subagents
+
+## Always Read-First (before any analysis or code change)
+1) /docloud/index.md
+2) The current task file under /docloud/tasks/*.md if one exists
+3) The most recent recap in /docloud/summaries (session or daily)
+4) For code edits: read target files AND /src/**/types.ts (if present)
+
+If these files are missing, create them before proceeding.
+
+## Always Write-Back (after each significant step)
+- Append action logs, results, and next steps to the *current* task file under /docloud/tasks.
+- If a session finishes or a phase completes, write a recap in /docloud/summaries/YYYY-MM-DD_session.md.
+- If you make or revise a decision (e.g., fftSize range, perf guard), create or update an ADR in /docloud/decisions/ADR-###-slug.md.
+- If you changed code, produce a short change log in /docloud/logs/CHANGELOG-<timestamp>.md.
+
+## Subagents (Task Tool) Policy
+- Use `task` subagents for: (a) large file scans, (b) parallel research, (c) CPU-bound analysis that would bloat the parent context.
+- Parent agent only receives subagent *summaries*. Subagents must write their raw findings to /docloud/logs/* and link them in the task summary.
+
+## Output Style
+Prefer YAML or Table for structured responses; use HTML GenUI only when you need a guide or interactive doc. All structured outputs MUST include:
+- `status: ok|blocked|needs-input`
+- `inputs:` (what you assumed)
+- `artifacts:` (files created/updated)
+- `next:` (bullet list)
+
+## Memory Guarantees
+Treat the files under /docloud as canonical memory. Do not rely exclusively on chat memory. If you need context, search & read the relevant file(s) first.
+
+## Tools & MCP
+- If a filesystem MCP is available, you MUST use it for read/write to ensure deterministic FS operations.
+- After file writes, run type checks and basic diagnostics (postToolUse hook will enforce this).
+
+
 0) Mission & Definition of Done
 
 Goal: Ship a minimal, smooth 60fps browser visualizer driven by the Web Audio API, with one page, one graph, one control panel.
@@ -118,28 +153,3 @@ Safe reads/build: npm install, npm run dev, npm run build, npx tsc --noEmit, git
 
 Diagnostics: grep -n, cat, ls, mcp_ide_getDiagnostics, mcp_ide_applyEdit.
 
-7) Risks & Mitigations
-
-Mic permissions denied → Fallback to file input with visible prompt.
-
-Frame drops → Reduce bar count; cache gradients; lower fftSize.
-
-Clipping/loud input → Sensitivity slider adjusts GainNode; clamp values 0.1–3.0.
-
-Mobile quirks → Gate AudioContext resume on user gesture; test on iOS Safari.
-
-8) Non-Goals (defer)
-
-Shaders/WebGL, 3D, presets, timeline recording, export to video, multiple visual modes.
-
-9) Review Checklist (Claude, complete before closing PR)
-
- All ATs pass
-
- No any in exported types
-
- No allocations in render loop
-
- ESLint/Prettier clean
-
- README quickstart updated
