@@ -51,11 +51,63 @@
           <span class="slider-value">1.0</span>
         </div>
 
-        <!-- Bar Count Control -->
+        <!-- Visualization Mode Selector -->
         <div class="control-group">
-          <label for="bar-count-slider">Bars:</label>
-          <input type="range" id="bar-count-slider" min="16" max="128" step="8" value="64" />
-          <span class="slider-value">64</span>
+          <label for="viz-mode">Visualization:</label>
+          <select id="viz-mode" class="mode-selector">
+            <option value="bars">Frequency Bars</option>
+            <option value="mandala">Mandala</option>
+          </select>
+        </div>
+
+        <!-- Bar Mode Controls -->
+        <div id="bar-controls" class="mode-controls">
+          <div class="control-group">
+            <label for="bar-count-slider">Bars:</label>
+            <input type="range" id="bar-count-slider" min="16" max="128" step="8" value="64" />
+            <span class="slider-value">64</span>
+          </div>
+        </div>
+
+        <!-- Mandala Mode Controls -->
+        <div id="mandala-controls" class="mode-controls" style="display: none;">
+          <div class="control-group">
+            <label for="mandala-segments">Segments:</label>
+            <input type="range" id="mandala-segments" min="8" max="64" step="8" value="32" />
+            <span class="slider-value">32</span>
+          </div>
+          <div class="control-group">
+            <label for="mandala-rings">Rings:</label>
+            <input type="range" id="mandala-rings" min="3" max="8" step="1" value="4" />
+            <span class="slider-value">4</span>
+          </div>
+          <div class="control-group">
+            <label for="mandala-rotation">Rotation Speed:</label>
+            <input type="range" id="mandala-rotation" min="0" max="10" step="0.5" value="2.0" />
+            <span class="slider-value">2.0°/s</span>
+          </div>
+          <div class="control-group">
+            <label for="mandala-palette">Colors:</label>
+            <select id="mandala-palette">
+              <option value="aurora">Aurora</option>
+              <option value="solar">Solar</option>
+              <option value="crystal">Crystal</option>
+              <option value="psychedelic">Psychedelic</option>
+              <option value="monochrome">Monochrome</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label for="mandala-symmetry">Symmetry:</label>
+            <select id="mandala-symmetry">
+              <option value="none">None</option>
+              <option value="mirror-x">Mirror X</option>
+              <option value="mirror-y">Mirror Y</option>
+              <option value="radial-2x">Radial 2x</option>
+              <option value="radial-4x">Radial 4x</option>
+              <option value="radial-8x">Radial 8x</option>
+              <option value="kaleidoscope">Kaleidoscope</option>
+            </select>
+          </div>
         </div>
 
         <!-- Theme Toggle -->

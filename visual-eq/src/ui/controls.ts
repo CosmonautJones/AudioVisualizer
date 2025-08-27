@@ -6,14 +6,18 @@
 import { AudioEngine } from '../audio/audioEngine.ts';
 import type { AudioEngineError } from '../audio/types.ts';
 import { VisualizerRenderer, type Theme } from '../viz/renderer.ts';
+import { VisualizationMode, type MandalaConfig, type BarConfig, ColorPalette, SymmetryMode, DEFAULT_BAR_CONFIG, DEFAULT_MANDALA_CONFIG } from '../viz/visualizationMode.ts';
 
 interface ControlsState {
   inputMode: 'mic' | 'file';
   sensitivity: number;
-  barCount: number;
   theme: Theme;
   isPlaying: boolean;
   isLoading: boolean;
+  // Visualization mode and configs
+  visualizationMode: VisualizationMode;
+  barConfig: BarConfig;
+  mandalaConfig: MandalaConfig;
 }
 
 export class VisualizerControls {
@@ -25,10 +29,12 @@ export class VisualizerControls {
   private state: ControlsState = {
     inputMode: 'mic',
     sensitivity: 1.0,
-    barCount: 64,
     theme: 'dark',
     isPlaying: false,
-    isLoading: false
+    isLoading: false,
+    visualizationMode: VisualizationMode.BARS,
+    barConfig: { ...DEFAULT_BAR_CONFIG },
+    mandalaConfig: { ...DEFAULT_MANDALA_CONFIG }
   };
 
   // Control elements
@@ -41,10 +47,24 @@ export class VisualizerControls {
   private fileName: HTMLElement | null = null;
   private changeFileButton: HTMLButtonElement | null = null;
   private sensitivitySlider: HTMLInputElement | null = null;
-  private barCountSlider: HTMLInputElement | null = null;
   private themeToggle: HTMLInputElement | null = null;
   private playbackButton: HTMLButtonElement | null = null;
   private statusElement: HTMLElement | null = null;
+
+  // Visualization mode controls
+  private vizModeSelector: HTMLSelectElement | null = null;
+  private barControls: HTMLElement | null = null;
+  private mandalaControls: HTMLElement | null = null;
+
+  // Bar-specific controls
+  private barCountSlider: HTMLInputElement | null = null;
+
+  // Mandala-specific controls
+  private mandalaSegments: HTMLInputElement | null = null;
+  private mandalaRings: HTMLInputElement | null = null;
+  private mandalaRotation: HTMLInputElement | null = null;
+  private mandalaPalette: HTMLSelectElement | null = null;
+  private mandalaSymmetry: HTMLSelectElement | null = null;
 
   /**
    * Initialize controls with audio engine, renderer, and visualization callbacks
@@ -70,21 +90,37 @@ export class VisualizerControls {
     this.fileName = document.getElementById('file-name');
     this.changeFileButton = document.getElementById('change-file') as HTMLButtonElement;
     this.sensitivitySlider = document.getElementById('sensitivity-slider') as HTMLInputElement;
-    this.barCountSlider = document.getElementById('bar-count-slider') as HTMLInputElement;
     this.themeToggle = document.getElementById('theme-toggle') as HTMLInputElement;
     this.playbackButton = document.getElementById('playback-button') as HTMLButtonElement;
     this.statusElement = document.getElementById('status-message');
 
+    // Find visualization mode controls
+    this.vizModeSelector = document.getElementById('viz-mode') as HTMLSelectElement;
+    this.barControls = document.getElementById('bar-controls');
+    this.mandalaControls = document.getElementById('mandala-controls');
+    
+    // Bar controls
+    this.barCountSlider = document.getElementById('bar-count-slider') as HTMLInputElement;
+    
+    // Mandala controls
+    this.mandalaSegments = document.getElementById('mandala-segments') as HTMLInputElement;
+    this.mandalaRings = document.getElementById('mandala-rings') as HTMLInputElement;
+    this.mandalaRotation = document.getElementById('mandala-rotation') as HTMLInputElement;
+    this.mandalaPalette = document.getElementById('mandala-palette') as HTMLSelectElement;
+    this.mandalaSymmetry = document.getElementById('mandala-symmetry') as HTMLSelectElement;
+
     // Validate critical DOM elements exist
     if (!this.inputSelector || !this.fileInput || !this.sensitivitySlider || 
-        !this.barCountSlider || !this.themeToggle || !this.playbackButton) {
+        !this.themeToggle || !this.playbackButton || !this.vizModeSelector) {
       throw new Error('Critical UI elements not found - HTML structure may be incomplete');
     }
 
     // Bind all control handlers
     this.bindInputSelector();
     this.bindSensitivitySlider();
+    this.bindVisualizationModeSelector();
     this.bindBarCountSlider();
+    this.bindMandalaControls();
     this.bindThemeToggle();
     this.bindPlaybackControl();
     this.bindFileButtons();
@@ -151,8 +187,26 @@ export class VisualizerControls {
     this.sensitivitySlider.addEventListener('input', (event) => {
       const value = parseFloat((event.target as HTMLInputElement).value);
       this.state.sensitivity = value;
+      
+      // Update both configurations
+      this.state.barConfig.sensitivity = value;
+      this.state.mandalaConfig.sensitivity = value;
+      
       this.audioEngine?.setSensitivity(value);
+      this.updateGlobalVisualizationConfig();
       this.updateUI(this.state);
+    });
+  }
+
+  /**
+   * Bind visualization mode selector functionality
+   */
+  bindVisualizationModeSelector(): void {
+    if (!this.vizModeSelector) return;
+
+    this.vizModeSelector.addEventListener('change', (event) => {
+      const mode = (event.target as HTMLSelectElement).value as VisualizationMode;
+      this.switchVisualizationMode(mode);
     });
   }
 
@@ -164,10 +218,80 @@ export class VisualizerControls {
 
     this.barCountSlider.addEventListener('input', (event) => {
       const value = parseInt((event.target as HTMLInputElement).value, 10);
-      this.state.barCount = value;
-      this.renderer?.setBarCount(value);
+      this.state.barConfig.barCount = value;
+      
+      // Update global configuration if bars mode is active
+      if (this.state.visualizationMode === VisualizationMode.BARS) {
+        this.updateGlobalVisualizationConfig();
+      }
+      
       this.updateUI(this.state);
     });
+  }
+
+  /**
+   * Bind mandala-specific controls
+   */
+  bindMandalaControls(): void {
+    // Segments control
+    if (this.mandalaSegments) {
+      this.mandalaSegments.addEventListener('input', (event) => {
+        const value = parseInt((event.target as HTMLInputElement).value, 10);
+        this.state.mandalaConfig.segments = value;
+        if (this.state.visualizationMode === VisualizationMode.MANDALA) {
+          this.updateGlobalVisualizationConfig();
+        }
+        this.updateUI(this.state);
+      });
+    }
+
+    // Rings control
+    if (this.mandalaRings) {
+      this.mandalaRings.addEventListener('input', (event) => {
+        const value = parseInt((event.target as HTMLInputElement).value, 10);
+        this.state.mandalaConfig.rings = value;
+        if (this.state.visualizationMode === VisualizationMode.MANDALA) {
+          this.updateGlobalVisualizationConfig();
+        }
+        this.updateUI(this.state);
+      });
+    }
+
+    // Rotation control
+    if (this.mandalaRotation) {
+      this.mandalaRotation.addEventListener('input', (event) => {
+        const value = parseFloat((event.target as HTMLInputElement).value);
+        this.state.mandalaConfig.rotationSpeed = value;
+        if (this.state.visualizationMode === VisualizationMode.MANDALA) {
+          this.updateGlobalVisualizationConfig();
+        }
+        this.updateUI(this.state);
+      });
+    }
+
+    // Palette control
+    if (this.mandalaPalette) {
+      this.mandalaPalette.addEventListener('change', (event) => {
+        const value = (event.target as HTMLSelectElement).value as ColorPalette;
+        this.state.mandalaConfig.colorPalette = value;
+        if (this.state.visualizationMode === VisualizationMode.MANDALA) {
+          this.updateGlobalVisualizationConfig();
+        }
+        this.updateUI(this.state);
+      });
+    }
+
+    // Symmetry control
+    if (this.mandalaSymmetry) {
+      this.mandalaSymmetry.addEventListener('change', (event) => {
+        const value = (event.target as HTMLSelectElement).value as SymmetryMode;
+        this.state.mandalaConfig.symmetryMode = value;
+        if (this.state.visualizationMode === VisualizationMode.MANDALA) {
+          this.updateGlobalVisualizationConfig();
+        }
+        this.updateUI(this.state);
+      });
+    }
   }
 
   /**
@@ -179,8 +303,14 @@ export class VisualizerControls {
     this.themeToggle.addEventListener('change', (event) => {
       const isDark = (event.target as HTMLInputElement).checked;
       this.state.theme = isDark ? 'dark' : 'light';
+      
+      // Update both configurations
+      this.state.barConfig.theme = this.state.theme;
+      this.state.mandalaConfig.theme = this.state.theme;
+      
       this.renderer?.setTheme(this.state.theme);
       document.body.className = this.state.theme;
+      this.updateGlobalVisualizationConfig();
       this.updateUI(this.state);
     });
   }
@@ -420,10 +550,46 @@ export class VisualizerControls {
       if (valueSpan) valueSpan.textContent = state.sensitivity.toFixed(1);
     }
 
+    // Update visualization mode selector
+    if (this.vizModeSelector) {
+      this.vizModeSelector.value = state.visualizationMode;
+    }
+
+    // Show/hide mode-specific controls
+    this.updateModeVisibility(state.visualizationMode);
+
+    // Update bar controls
     if (this.barCountSlider) {
-      this.barCountSlider.value = state.barCount.toString();
+      this.barCountSlider.value = state.barConfig.barCount.toString();
       const valueSpan = this.barCountSlider.parentElement?.querySelector('.slider-value');
-      if (valueSpan) valueSpan.textContent = state.barCount.toString();
+      if (valueSpan) valueSpan.textContent = state.barConfig.barCount.toString();
+    }
+
+    // Update mandala controls
+    if (this.mandalaSegments) {
+      this.mandalaSegments.value = state.mandalaConfig.segments.toString();
+      const valueSpan = this.mandalaSegments.parentElement?.querySelector('.slider-value');
+      if (valueSpan) valueSpan.textContent = state.mandalaConfig.segments.toString();
+    }
+
+    if (this.mandalaRings) {
+      this.mandalaRings.value = state.mandalaConfig.rings.toString();
+      const valueSpan = this.mandalaRings.parentElement?.querySelector('.slider-value');
+      if (valueSpan) valueSpan.textContent = state.mandalaConfig.rings.toString();
+    }
+
+    if (this.mandalaRotation) {
+      this.mandalaRotation.value = state.mandalaConfig.rotationSpeed.toString();
+      const valueSpan = this.mandalaRotation.parentElement?.querySelector('.slider-value');
+      if (valueSpan) valueSpan.textContent = state.mandalaConfig.rotationSpeed.toFixed(1) + '°/s';
+    }
+
+    if (this.mandalaPalette) {
+      this.mandalaPalette.value = state.mandalaConfig.colorPalette;
+    }
+
+    if (this.mandalaSymmetry) {
+      this.mandalaSymmetry.value = state.mandalaConfig.symmetryMode;
     }
 
     // Update theme toggle
@@ -443,7 +609,11 @@ export class VisualizerControls {
     }
 
     // Disable controls during loading
-    const allInputs = [this.sensitivitySlider, this.barCountSlider, this.themeToggle];
+    const allInputs = [
+      this.sensitivitySlider, this.barCountSlider, this.themeToggle,
+      this.vizModeSelector, this.mandalaSegments, this.mandalaRings, 
+      this.mandalaRotation, this.mandalaPalette, this.mandalaSymmetry
+    ];
     allInputs.forEach(input => {
       if (input) input.disabled = state.isLoading;
     });
@@ -520,6 +690,95 @@ export class VisualizerControls {
         return 'Audio features not supported in this browser. Please try Chrome, Firefox, or Safari.';
       default:
         return 'An unknown error occurred while initializing audio.';
+    }
+  }
+
+  /**
+   * Switch visualization mode
+   */
+  private switchVisualizationMode(mode: VisualizationMode): void {
+    this.state.visualizationMode = mode;
+    
+    // Update global visualization configuration
+    this.updateGlobalVisualizationConfig();
+    
+    // Update UI to show/hide appropriate controls
+    this.updateUI(this.state);
+    
+    // Show status message
+    const modeName = mode === VisualizationMode.BARS ? 'Frequency Bars' : 'Mandala';
+    this.showStatus(`Switched to ${modeName} visualization`, 'success');
+  }
+
+  /**
+   * Update global visualization configuration
+   */
+  private updateGlobalVisualizationConfig(): void {
+    // Get the global function
+    const switchVisualizationMode = (window as any).switchVisualizationMode;
+    if (!switchVisualizationMode) {
+      console.warn('Global switchVisualizationMode function not available');
+      return;
+    }
+
+    // Prepare configuration based on current mode
+    let config: any;
+    if (this.state.visualizationMode === VisualizationMode.MANDALA) {
+      config = {
+        ...this.state.mandalaConfig,
+        theme: this.state.theme,
+        sensitivity: this.state.sensitivity
+      };
+    } else {
+      config = {
+        ...this.state.barConfig,
+        theme: this.state.theme,
+        sensitivity: this.state.sensitivity
+      };
+    }
+
+    // Call global function to update visualization
+    switchVisualizationMode(this.state.visualizationMode, config);
+  }
+
+  /**
+   * Update visibility of mode-specific control panels
+   */
+  private updateModeVisibility(mode: VisualizationMode): void {
+    if (this.barControls) {
+      this.barControls.style.display = mode === VisualizationMode.BARS ? 'block' : 'none';
+    }
+    
+    if (this.mandalaControls) {
+      this.mandalaControls.style.display = mode === VisualizationMode.MANDALA ? 'block' : 'none';
+    }
+  }
+
+  /**
+   * Sync state from global configuration (called externally if needed)
+   */
+  syncFromGlobalConfig(): void {
+    const getCurrentConfig = (window as any).getCurrentVisualizationConfig;
+    if (!getCurrentConfig) return;
+
+    try {
+      const globalConfig = getCurrentConfig();
+      if (globalConfig) {
+        // Update local state to match global config
+        this.state.visualizationMode = globalConfig.mode;
+        this.state.sensitivity = globalConfig.sensitivity;
+        this.state.theme = globalConfig.theme;
+        
+        if (globalConfig.mode === VisualizationMode.MANDALA) {
+          this.state.mandalaConfig = { ...this.state.mandalaConfig, ...globalConfig };
+        } else {
+          this.state.barConfig = { ...this.state.barConfig, ...globalConfig };
+        }
+        
+        this.updateUI(this.state);
+      }
+    } catch (error) {
+      console.warn('Failed to sync from global config:', error);
     }
   }
 
