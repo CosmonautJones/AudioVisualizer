@@ -6,6 +6,8 @@
 import { BaseRenderer } from './baseRenderer.ts';
 import type { Theme } from './themes.ts';
 import type { VisualizationConfig, BarConfig } from './visualizationMode.ts';
+import { ColorMapping, type ColorMode, type ColorConfig } from './colorMapping.ts';
+import { BarEffects, type BarVisualMode, type BarEffectConfig, type BarLayout as EffectBarLayout } from './effects/barEffects.ts';
 
 interface BarLayout {
   x: number;
@@ -19,36 +21,113 @@ export class BarRenderer extends BaseRenderer {
   private barLayouts: BarLayout[] = [];
   private frequencyBinCount = 0;
   private gradient: CanvasGradient | null = null;
+  
+  // Enhanced color mapping system
+  private colorMapping: ColorMapping | null = null;
+  private colorMode: ColorMode = 'theme';
+  
+  // Bar effects system
+  private barEffects: BarEffects | null = null;
+  private visualMode: BarVisualMode = 'standard';
 
   /**
-   * Main render method - draw frequency bars
+   * Initialize the renderer (override from BaseRenderer)
+   */
+  initialize(canvas: HTMLCanvasElement): boolean {
+    const success = super.initialize(canvas);
+    if (!success) return false;
+    
+    // Initialize color mapping and effects systems
+    if (this.canvas && this.ctx) {
+      this.colorMapping = new ColorMapping(this.canvas, this.ctx);
+      this.barEffects = new BarEffects(this.canvas, this.ctx, this.dpr || 1);
+    }
+    
+    return true;
+  }
+
+  /**
+   * Main render method - draw frequency bars with enhanced colors
    */
   render(frequencyData: Uint8Array): void {
     this.performRender(() => {
       if (this.barLayouts.length === 0) return;
 
       this.clearCanvas();
-      this.drawBars(frequencyData);
+      
+      if (this.visualMode === 'standard') {
+        this.drawEnhancedBars(frequencyData);
+      } else {
+        this.drawBarsWithEffects(frequencyData);
+      }
     });
   }
 
   /**
-   * Draw frequency bars
+   * Draw frequency bars with effects using BarEffects system
    */
-  private drawBars(frequencyData: Uint8Array): void {
-    if (!this.ctx) return;
+  private drawBarsWithEffects(frequencyData: Uint8Array): void {
+    if (!this.ctx || !this.colorMapping || !this.barEffects) return;
+
+    const displayHeight = this.canvasHeight / (this.dpr || 1);
+
+    // Create color configuration
+    const colorConfig: ColorConfig = {
+      mode: this.colorMode,
+      theme: this.theme,
+      barCount: this.barCount,
+      canvasHeight: displayHeight
+    };
+
+    // Create bar effect configuration
+    const effectConfig: BarEffectConfig & ColorConfig = {
+      visualMode: this.visualMode,
+      theme: this.theme,
+      barCount: this.barCount,
+      canvasWidth: this.canvasWidth / (this.dpr || 1),
+      canvasHeight: displayHeight,
+      sensitivity: 1.0, // TODO: Get from audio config
+      ...colorConfig
+    };
+
+    // Convert BarLayout to EffectBarLayout format
+    const effectBarLayouts: EffectBarLayout[] = this.barLayouts.map(bar => ({
+      x: bar.x,
+      width: bar.width,
+      logFreqIndex: bar.logFreqIndex
+    }));
+
+    // Render using BarEffects system
+    this.barEffects.renderBarsWithEffects(
+      frequencyData,
+      effectBarLayouts,
+      this.colorMapping,
+      effectConfig
+    );
+  }
+
+  /**
+   * Draw frequency bars with enhanced color mapping
+   */
+  private drawEnhancedBars(frequencyData: Uint8Array): void {
+    if (!this.ctx || !this.colorMapping) return;
 
     const ctx = this.ctx;
     const displayWidth = this.canvasWidth / (this.dpr || 1);
     const displayHeight = this.canvasHeight / (this.dpr || 1);
 
-    // Set gradient for bars
-    if (this.gradient) {
-      ctx.fillStyle = this.gradient;
-    }
+    // Create color configuration
+    const colorConfig: ColorConfig = {
+      mode: this.colorMode,
+      theme: this.theme,
+      barCount: this.barCount,
+      canvasHeight: displayHeight
+    };
 
-    // Render bars in single loop (minimize state changes)
-    for (const bar of this.barLayouts) {
+    // Render bars with individual colors based on mode
+    for (let i = 0; i < this.barLayouts.length; i++) {
+      const bar = this.barLayouts[i];
+      
       // Get frequency value for this bar (logarithmic mapping)
       const freqValue = frequencyData[bar.logFreqIndex] || 0;
       
@@ -59,9 +138,58 @@ export class BarRenderer extends BaseRenderer {
       // Draw bar from bottom up
       const barY = displayHeight - barHeight;
       
-      // Single fillRect call per bar
+      // Get color for this specific bar
+      const barColor = this.colorMapping.getBarColor(colorConfig, i, freqValue);
+      
+      // Apply color and draw
+      ctx.fillStyle = barColor.fill;
+      if (barColor.alpha !== undefined) {
+        ctx.globalAlpha = barColor.alpha;
+      }
+      
       ctx.fillRect(bar.x, barY, bar.width, barHeight);
+      
+      // Reset alpha if it was changed
+      if (barColor.alpha !== undefined) {
+        ctx.globalAlpha = 1.0;
+      }
     }
+  }
+
+  /**
+   * Set the color mode for bar visualization
+   */
+  setColorMode(mode: ColorMode): void {
+    this.colorMode = mode;
+    // Clear color cache when mode changes
+    if (this.colorMapping) {
+      this.colorMapping.clearCache();
+    }
+  }
+
+  /**
+   * Get current color mode
+   */
+  getColorMode(): ColorMode {
+    return this.colorMode;
+  }
+
+  /**
+   * Set the visual mode for bar visualization
+   */
+  setVisualMode(mode: BarVisualMode): void {
+    this.visualMode = mode;
+    // Clear peak holds when switching modes
+    if (this.barEffects) {
+      this.barEffects.clearPeakHolds();
+    }
+  }
+
+  /**
+   * Get current visual mode
+   */
+  getVisualMode(): BarVisualMode {
+    return this.visualMode;
   }
 
   /**
@@ -83,6 +211,16 @@ export class BarRenderer extends BaseRenderer {
     const barConfig = config as BarConfig;
     if (barConfig.barCount !== undefined) {
       this.setBarCount(barConfig.barCount);
+    }
+
+    // Handle color mode changes (if specified in config)
+    if ('colorMode' in barConfig && barConfig.colorMode !== this.colorMode) {
+      this.setColorMode(barConfig.colorMode as ColorMode);
+    }
+
+    // Handle visual mode changes (if specified in config)
+    if ('visualMode' in barConfig && barConfig.visualMode !== this.visualMode) {
+      this.setVisualMode(barConfig.visualMode as BarVisualMode);
     }
   }
 
@@ -107,6 +245,10 @@ export class BarRenderer extends BaseRenderer {
    */
   protected onThemeChange(): void {
     this.createGradient();
+    // Clear color mapping cache when theme changes
+    if (this.colorMapping) {
+      this.colorMapping.clearCache();
+    }
   }
 
   /**
@@ -178,5 +320,17 @@ export class BarRenderer extends BaseRenderer {
     super.dispose();
     this.gradient = null;
     this.barLayouts = [];
+    
+    // Dispose color mapping system
+    if (this.colorMapping) {
+      this.colorMapping.dispose();
+      this.colorMapping = null;
+    }
+
+    // Dispose bar effects system
+    if (this.barEffects) {
+      this.barEffects.dispose();
+      this.barEffects = null;
+    }
   }
 }

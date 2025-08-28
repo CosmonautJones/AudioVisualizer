@@ -5,7 +5,7 @@
 
 import { AudioEngine } from '../audio/audioEngine.ts';
 import type { AudioEngineError } from '../audio/types.ts';
-import { VisualizerRenderer, type Theme } from '../viz/renderer.ts';
+import { BaseRenderer, type Theme } from '../viz/baseRenderer.ts';
 import { VisualizationMode, type MandalaConfig, type BarConfig, ColorPalette, SymmetryMode, DEFAULT_BAR_CONFIG, DEFAULT_MANDALA_CONFIG } from '../viz/visualizationMode.ts';
 
 interface ControlsState {
@@ -22,7 +22,7 @@ interface ControlsState {
 
 export class VisualizerControls {
   private audioEngine: AudioEngine | null = null;
-  private renderer: VisualizerRenderer | null = null;
+  private renderer: BaseRenderer | null = null;
   private onVisualizationStart: (() => void) | null = null;
   private onVisualizationStop: (() => void) | null = null;
   
@@ -47,7 +47,7 @@ export class VisualizerControls {
   private fileName: HTMLElement | null = null;
   private changeFileButton: HTMLButtonElement | null = null;
   private sensitivitySlider: HTMLInputElement | null = null;
-  private themeToggle: HTMLInputElement | null = null;
+  private themeToggle: HTMLSelectElement | null = null;
   private playbackButton: HTMLButtonElement | null = null;
   private statusElement: HTMLElement | null = null;
 
@@ -58,6 +58,8 @@ export class VisualizerControls {
 
   // Bar-specific controls
   private barCountSlider: HTMLInputElement | null = null;
+  private barColorModeSelector: HTMLSelectElement | null = null;
+  private barVisualModeSelector: HTMLSelectElement | null = null;
 
   // Mandala-specific controls
   private mandalaSegments: HTMLInputElement | null = null;
@@ -71,7 +73,7 @@ export class VisualizerControls {
    */
   initializeControls(
     audioEngine: AudioEngine, 
-    renderer: VisualizerRenderer,
+    renderer: BaseRenderer,
     onStart: () => void,
     onStop: () => void
   ): void {
@@ -90,7 +92,7 @@ export class VisualizerControls {
     this.fileName = document.getElementById('file-name');
     this.changeFileButton = document.getElementById('change-file') as HTMLButtonElement;
     this.sensitivitySlider = document.getElementById('sensitivity-slider') as HTMLInputElement;
-    this.themeToggle = document.getElementById('theme-toggle') as HTMLInputElement;
+    this.themeToggle = document.getElementById('theme-selector') as HTMLSelectElement;
     this.playbackButton = document.getElementById('playback-button') as HTMLButtonElement;
     this.statusElement = document.getElementById('status-message');
 
@@ -101,6 +103,8 @@ export class VisualizerControls {
     
     // Bar controls
     this.barCountSlider = document.getElementById('bar-count-slider') as HTMLInputElement;
+    this.barColorModeSelector = document.getElementById('bar-color-mode') as HTMLSelectElement;
+    this.barVisualModeSelector = document.getElementById('bar-visual-mode') as HTMLSelectElement;
     
     // Mandala controls
     this.mandalaSegments = document.getElementById('mandala-segments') as HTMLInputElement;
@@ -120,6 +124,8 @@ export class VisualizerControls {
     this.bindSensitivitySlider();
     this.bindVisualizationModeSelector();
     this.bindBarCountSlider();
+    this.bindBarColorMode();
+    this.bindBarVisualMode();
     this.bindMandalaControls();
     this.bindThemeToggle();
     this.bindPlaybackControl();
@@ -199,15 +205,36 @@ export class VisualizerControls {
   }
 
   /**
-   * Bind visualization mode selector functionality
+   * Bind visualization mode selector functionality (enhanced UI with cards)
    */
   bindVisualizationModeSelector(): void {
-    if (!this.vizModeSelector) return;
-
-    this.vizModeSelector.addEventListener('change', (event) => {
-      const mode = (event.target as HTMLSelectElement).value as VisualizationMode;
-      this.switchVisualizationMode(mode);
+    // Bind to the new mode cards
+    const modeCards = document.querySelectorAll('.mode-card');
+    modeCards.forEach(card => {
+      card.addEventListener('click', (event) => {
+        const mode = (event.currentTarget as HTMLElement).getAttribute('data-mode') as VisualizationMode;
+        if (mode) {
+          // Update card selection
+          modeCards.forEach(c => c.classList.remove('active'));
+          (event.currentTarget as HTMLElement).classList.add('active');
+          
+          // Update hidden select for compatibility
+          if (this.vizModeSelector) {
+            this.vizModeSelector.value = mode;
+          }
+          
+          this.switchVisualizationMode(mode);
+        }
+      });
     });
+
+    // Also bind to the hidden select as fallback
+    if (this.vizModeSelector) {
+      this.vizModeSelector.addEventListener('change', (event) => {
+        const mode = (event.target as HTMLSelectElement).value as VisualizationMode;
+        this.switchVisualizationMode(mode);
+      });
+    }
   }
 
   /**
@@ -226,6 +253,48 @@ export class VisualizerControls {
       }
       
       this.updateUI(this.state);
+    });
+  }
+
+  /**
+   * Bind bar color mode selector functionality
+   */
+  bindBarColorMode(): void {
+    if (!this.barColorModeSelector) return;
+
+    this.barColorModeSelector.addEventListener('change', (event) => {
+      const colorMode = (event.target as HTMLSelectElement).value as 'theme' | 'frequency' | 'rainbow' | 'amplitude';
+      this.state.barConfig.colorMode = colorMode;
+      
+      // Update global configuration if bars mode is active
+      if (this.state.visualizationMode === VisualizationMode.BARS) {
+        this.updateGlobalVisualizationConfig();
+      }
+      
+      this.updateUI(this.state);
+      
+      console.log(`Bar color mode changed to: ${colorMode}`);
+    });
+  }
+
+  /**
+   * Bind bar visual mode selector functionality
+   */
+  bindBarVisualMode(): void {
+    if (!this.barVisualModeSelector) return;
+
+    this.barVisualModeSelector.addEventListener('change', (event) => {
+      const visualMode = (event.target as HTMLSelectElement).value as 'standard' | 'wave' | 'mirror' | '3d' | 'peak-hold';
+      this.state.barConfig.visualMode = visualMode;
+      
+      // Update global configuration if bars mode is active
+      if (this.state.visualizationMode === VisualizationMode.BARS) {
+        this.updateGlobalVisualizationConfig();
+      }
+      
+      this.updateUI(this.state);
+      
+      console.log(`Bar visual mode changed to: ${visualMode}`);
     });
   }
 
@@ -295,14 +364,15 @@ export class VisualizerControls {
   }
 
   /**
-   * Bind theme toggle functionality
+   * Bind theme selector functionality (enhanced UI)
    */
   bindThemeToggle(): void {
-    if (!this.themeToggle) return;
+    const themeSelector = document.getElementById('theme-selector') as HTMLSelectElement;
+    if (!themeSelector) return;
 
-    this.themeToggle.addEventListener('change', (event) => {
-      const isDark = (event.target as HTMLInputElement).checked;
-      this.state.theme = isDark ? 'dark' : 'light';
+    themeSelector.addEventListener('change', (event) => {
+      const selectedTheme = (event.target as HTMLSelectElement).value as Theme;
+      this.state.theme = selectedTheme;
       
       // Update both configurations
       this.state.barConfig.theme = this.state.theme;
@@ -312,6 +382,8 @@ export class VisualizerControls {
       document.body.className = this.state.theme;
       this.updateGlobalVisualizationConfig();
       this.updateUI(this.state);
+      
+      console.log(`Theme changed to: ${selectedTheme}`);
     });
   }
 
@@ -565,6 +637,16 @@ export class VisualizerControls {
       if (valueSpan) valueSpan.textContent = state.barConfig.barCount.toString();
     }
 
+    // Update bar color mode selector
+    if (this.barColorModeSelector && state.barConfig.colorMode) {
+      this.barColorModeSelector.value = state.barConfig.colorMode;
+    }
+
+    // Update bar visual mode selector
+    if (this.barVisualModeSelector && state.barConfig.visualMode) {
+      this.barVisualModeSelector.value = state.barConfig.visualMode;
+    }
+
     // Update mandala controls
     if (this.mandalaSegments) {
       this.mandalaSegments.value = state.mandalaConfig.segments.toString();
@@ -592,9 +674,12 @@ export class VisualizerControls {
       this.mandalaSymmetry.value = state.mandalaConfig.symmetryMode;
     }
 
-    // Update theme toggle
-    if (this.themeToggle) {
-      this.themeToggle.checked = state.theme === 'dark';
+    // Update theme selector (new enhanced UI)
+    const themeSelector = document.getElementById('theme-selector') as HTMLSelectElement;
+    if (themeSelector) {
+      themeSelector.value = state.theme;
+      // Also update body class for theme
+      document.body.className = state.theme;
     }
 
     // Update playback button
@@ -717,7 +802,8 @@ export class VisualizerControls {
     // Get the global function
     const switchVisualizationMode = (window as any).switchVisualizationMode;
     if (!switchVisualizationMode) {
-      console.warn('Global switchVisualizationMode function not available');
+      console.error('VisualizerControls: Global switchVisualizationMode function not available - this will prevent mode switching from working correctly');
+      this.showStatus('Configuration update failed - visualization mode switching may not work', 'error');
       return;
     }
 
@@ -737,8 +823,15 @@ export class VisualizerControls {
       };
     }
 
-    // Call global function to update visualization
-    switchVisualizationMode(this.state.visualizationMode, config);
+    console.log(`VisualizerControls: Updating global config for ${this.state.visualizationMode} mode:`, config);
+
+    try {
+      // Call global function to update visualization
+      switchVisualizationMode(this.state.visualizationMode, config);
+    } catch (error) {
+      console.error('VisualizerControls: Error calling global switchVisualizationMode:', error);
+      this.showStatus('Failed to update visualization settings', 'error');
+    }
   }
 
   /**
