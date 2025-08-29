@@ -75,11 +75,26 @@ export class ZoomManager {
     this.canvas = canvas;
     
     // Store original canvas dimensions
-    const rect = canvas.getBoundingClientRect();
+    this.updateOriginalDimensions();
+    
+    this.setupEventListeners();
+  }
+
+  /**
+   * Update original dimensions based on current canvas context
+   * Call this when canvas context changes (e.g., mode switches)
+   */
+  updateOriginalDimensions(): void {
+    if (!this.canvas) return;
+    
+    const rect = this.canvas.getBoundingClientRect();
     this.originalWidth = rect.width;
     this.originalHeight = rect.height;
     
-    this.setupEventListeners();
+    // If currently zoomed, maintain zoom but recalculate based on new dimensions
+    if (this.state.level !== 1.0) {
+      this.resizeCanvas();
+    }
   }
 
   /**
@@ -146,6 +161,9 @@ export class ZoomManager {
    * Reset zoom to 1.0 and center pan
    */
   resetZoom(smooth = this.config.smoothTransition): void {
+    // Update original dimensions before resetting to ensure correct base size
+    this.updateOriginalDimensions();
+    
     if (smooth) {
       this.animateToState({ level: 1.0, panX: 0, panY: 0 });
     } else {
@@ -156,6 +174,28 @@ export class ZoomManager {
       this.emit('zoom', this.state);
       this.emit('pan', this.state);
     }
+  }
+
+  /**
+   * Force reset canvas to original container dimensions
+   * Used when exiting fullscreen or fixing dimension issues
+   */
+  forceResetDimensions(): void {
+    if (!this.canvas) return;
+    
+    // Reset to base dimensions (800x450) if needed
+    this.originalWidth = 800;
+    this.originalHeight = 450;
+    this.state.level = 1.0;
+    this.state.panX = 0;
+    this.state.panY = 0;
+    
+    // Apply the original dimensions
+    this.canvas.style.width = `${this.originalWidth}px`;
+    this.canvas.style.height = `${this.originalHeight}px`;
+    
+    this.emit('zoom', this.state);
+    this.emit('pan', this.state);
   }
 
   /**
@@ -233,9 +273,25 @@ export class ZoomManager {
     const newWidth = this.originalWidth * this.state.level;
     const newHeight = this.originalHeight * this.state.level;
     
-    // Update canvas element style dimensions
-    this.canvas.style.width = `${newWidth}px`;
-    this.canvas.style.height = `${newHeight}px`;
+    // Add safeguards to prevent canvas from exceeding reasonable bounds
+    const container = this.canvas.parentElement;
+    if (container && !document.fullscreenElement) {
+      const containerRect = container.getBoundingClientRect();
+      const maxWidth = containerRect.width - 40; // Account for padding
+      const maxHeight = containerRect.height - 40;
+      
+      // If new dimensions would exceed container, constrain them
+      const constrainedWidth = Math.min(newWidth, maxWidth);
+      const constrainedHeight = Math.min(newHeight, maxHeight);
+      
+      // Update canvas element style dimensions
+      this.canvas.style.width = `${constrainedWidth}px`;
+      this.canvas.style.height = `${constrainedHeight}px`;
+    } else {
+      // In fullscreen or no container constraints
+      this.canvas.style.width = `${newWidth}px`;
+      this.canvas.style.height = `${newHeight}px`;
+    }
     
     // Trigger resize event for renderer to update internal dimensions
     const resizeEvent = new Event('resize');

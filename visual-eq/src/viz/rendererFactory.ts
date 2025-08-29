@@ -7,10 +7,12 @@ import { BaseRenderer } from './baseRenderer.ts';
 import { BarRenderer } from './barRenderer.ts';
 import { MandalaRenderer } from './mandalaRenderer.ts';
 import { VisualizationMode, type VisualizationConfig } from './visualizationMode.ts';
+import { ZoomManager } from './zoomManager.ts';
 
 export class RendererFactory {
   private currentRenderer: BaseRenderer | null = null;
   private canvas: HTMLCanvasElement | null = null;
+  private sharedZoomManager: ZoomManager | null = null;
 
   /**
    * Initialize with canvas element
@@ -29,9 +31,15 @@ export class RendererFactory {
       return this.currentRenderer;
     }
 
-    // Dispose of current renderer
+    // Preserve zoom manager before disposing current renderer
     if (this.currentRenderer) {
-      this.currentRenderer.dispose();
+      const currentZoomManager = this.currentRenderer.getZoomManager();
+      if (currentZoomManager && !this.sharedZoomManager) {
+        this.sharedZoomManager = currentZoomManager;
+      }
+      
+      // Dispose current renderer without destroying zoom manager
+      this.disposeCurrentRenderer();
     }
 
     // Create new renderer based on mode
@@ -49,6 +57,11 @@ export class RendererFactory {
     // Initialize the new renderer
     if (this.canvas && !this.currentRenderer.initialize(this.canvas)) {
       throw new Error('Failed to initialize renderer');
+    }
+
+    // Initialize zoom with preserved zoom manager
+    if (this.sharedZoomManager) {
+      this.currentRenderer.initializeZoom(this.sharedZoomManager);
     }
 
     return this.currentRenderer;
@@ -86,6 +99,45 @@ export class RendererFactory {
     if (this.currentRenderer) {
       this.currentRenderer.updateFrequencyBinCount(binCount);
     }
+  }
+
+  /**
+   * Initialize zoom for the current renderer
+   */
+  initializeZoom(zoomManager?: ZoomManager): void {
+    if (!this.currentRenderer) return;
+
+    // Store zoom manager reference if provided
+    if (zoomManager && !this.sharedZoomManager) {
+      this.sharedZoomManager = zoomManager;
+    }
+
+    // Initialize zoom on current renderer
+    this.currentRenderer.initializeZoom(this.sharedZoomManager || zoomManager);
+  }
+
+  /**
+   * Get the shared zoom manager
+   */
+  getZoomManager(): ZoomManager | null {
+    return this.sharedZoomManager || (this.currentRenderer?.getZoomManager() ?? null);
+  }
+
+  /**
+   * Dispose current renderer while preserving zoom manager
+   */
+  private disposeCurrentRenderer(): void {
+    if (!this.currentRenderer) return;
+
+    // Extract zoom manager before disposal to prevent it from being destroyed
+    const zoomManager = this.currentRenderer.getZoomManager();
+    if (zoomManager && !this.sharedZoomManager) {
+      this.sharedZoomManager = zoomManager;
+    }
+
+    // Dispose renderer while preserving zoom manager
+    this.currentRenderer.dispose(true);
+    this.currentRenderer = null;
   }
 
   /**
@@ -135,6 +187,12 @@ export class RendererFactory {
       this.currentRenderer.dispose();
       this.currentRenderer = null;
     }
+    
+    if (this.sharedZoomManager) {
+      this.sharedZoomManager.dispose();
+      this.sharedZoomManager = null;
+    }
+    
     this.canvas = null;
   }
 }

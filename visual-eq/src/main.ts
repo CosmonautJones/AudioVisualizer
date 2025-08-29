@@ -44,6 +44,7 @@ class AudioVisualizerApp {
       this.controls.initializeControls(
         this.audioEngine, 
         renderer,
+        this.rendererFactory,
         () => this.startVisualization(), // onStart callback
         () => this.stopVisualization()   // onStop callback
       );

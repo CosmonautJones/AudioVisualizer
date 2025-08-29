@@ -278,10 +278,14 @@ export abstract class BaseRenderer {
 
   /**
    * Dispose of resources
+   * @param preserveZoomManager - If true, zoom manager won't be disposed (for renderer switching)
    */
-  dispose(): void {
-    if (this.zoomManager) {
+  dispose(preserveZoomManager: boolean = false): void {
+    if (this.zoomManager && !preserveZoomManager) {
       this.zoomManager.dispose();
+      this.zoomManager = null;
+    } else if (preserveZoomManager) {
+      // Clear zoom manager reference without disposing it
       this.zoomManager = null;
     }
     

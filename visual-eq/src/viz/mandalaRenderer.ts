@@ -123,17 +123,8 @@ export class MandalaRenderer extends BaseRenderer {
       this.updateAnimation();
       this.clearCanvas();
       
-      // Save context state for zoom transformation
       if (this.ctx) {
-        this.ctx.save();
-        
-        // Apply zoom transformation if enabled
-        this.applyZoomTransform();
-        
         this.drawMandala(frequencyData);
-        
-        // Restore context state
-        this.ctx.restore();
       }
     });
   }
@@ -556,8 +547,8 @@ export class MandalaRenderer extends BaseRenderer {
   /**
    * Dispose of resources
    */
-  dispose(): void {
-    super.dispose();
+  dispose(preserveZoomManager: boolean = false): void {
+    super.dispose(preserveZoomManager);
     this.segments = [];
     this.polarCache.clear();
     this.gradientCache.clear();

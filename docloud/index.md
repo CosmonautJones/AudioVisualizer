@@ -62,6 +62,8 @@ Update this index when adding new documentation categories or major files.
 - [ADR-001: Renderer Architecture](./decisions/ADR-001-renderer-architecture.md) - Multi-renderer foundation
 - [ADR-002: ColorMapping System](./decisions/ADR-002-color-mapping-system.md) - 4-mode color system
 - [ADR-003: BarEffects Architecture](./decisions/ADR-003-bar-effects-architecture.md) - 5-mode effects system
+- [ADR-004: Zoom & Fullscreen Architecture](./decisions/ADR-004-zoom-fullscreen-architecture.md) - Interactive canvas controls
+- [ADR-005: Zoom Lifecycle Management](./decisions/ADR-005-zoom-lifecycle-management.md) - Shared zoom manager architecture
 
 ## Recent Activity
 ### Latest Session (2025-08-29)
@@ -75,6 +77,7 @@ Update this index when adding new documentation categories or major files.
 - [UI Design Enhancements](./logs/ui-design-2025-08-27.md) - Glassmorphism interface
 
 ## Change History
+- [Zoom Renderer Fix](./logs/CHANGELOG-2025-08-29-zoom-renderer-fix.md) - Critical zoom persistence fix across mode switches
 - [Zoom & UI Hotfixes](./logs/CHANGELOG-2025-08-29-zoom-ui-improvements.md) - Canvas resize zoom + status positioning
 - [Mode Switching Implementation](./logs/CHANGELOG-2025-08-27-controls-mode-switching.md)
 - [Audio Engine Analysis](./logs/audio-analysis-20250827_172645.md)

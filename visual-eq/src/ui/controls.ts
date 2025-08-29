@@ -9,6 +9,7 @@ import { BaseRenderer, type Theme } from '../viz/baseRenderer.ts';
 import { VisualizationMode, type MandalaConfig, type BarConfig, ColorPalette, SymmetryMode, DEFAULT_BAR_CONFIG, DEFAULT_MANDALA_CONFIG } from '../viz/visualizationMode.ts';
 import { ZoomManager } from '../viz/zoomManager.ts';
 import { FullscreenManager } from './fullscreenManager.ts';
+import { RendererFactory } from '../viz/rendererFactory.ts';
 
 interface ControlsState {
   inputMode: 'mic' | 'file';
@@ -28,8 +29,10 @@ interface ControlsState {
 export class VisualizerControls {
   private audioEngine: AudioEngine | null = null;
   private renderer: BaseRenderer | null = null;
+  private rendererFactory: RendererFactory | null = null;
   private onVisualizationStart: (() => void) | null = null;
   private onVisualizationStop: (() => void) | null = null;
+  private statusTimeoutId: number | null = null;
   
   private state: ControlsState = {
     inputMode: 'mic',
@@ -93,11 +96,13 @@ export class VisualizerControls {
   initializeControls(
     audioEngine: AudioEngine, 
     renderer: BaseRenderer,
+    rendererFactory: RendererFactory,
     onStart: () => void,
     onStop: () => void
   ): void {
     this.audioEngine = audioEngine;
     this.renderer = renderer;
+    this.rendererFactory = rendererFactory;
     this.onVisualizationStart = onStart;
     this.onVisualizationStop = onStop;
 
@@ -783,16 +788,23 @@ export class VisualizerControls {
   private showStatus(message: string, type: 'success' | 'warning' | 'error'): void {
     if (!this.statusElement) return;
 
+    // Clear any existing timeout to prevent premature clearing
+    if (this.statusTimeoutId !== null) {
+      clearTimeout(this.statusTimeoutId);
+      this.statusTimeoutId = null;
+    }
+
     this.statusElement.textContent = message;
     this.statusElement.className = `status status-${type}`;
     
     // Auto-hide success messages after 3 seconds
     if (type === 'success') {
-      setTimeout(() => {
+      this.statusTimeoutId = setTimeout(() => {
         if (this.statusElement) {
           this.statusElement.textContent = '';
           this.statusElement.className = 'status';
         }
+        this.statusTimeoutId = null;
       }, 3000);
     }
   }
@@ -932,12 +944,19 @@ export class VisualizerControls {
       return;
     }
 
-    // Initialize zoom manager
-    this.zoomManager = new ZoomManager(canvas);
-    
-    // Initialize zoom support in renderer
-    if (this.renderer) {
-      this.renderer.initializeZoom(this.zoomManager);
+    // Initialize zoom manager - use existing one from renderer factory if available
+    if (this.rendererFactory) {
+      this.zoomManager = this.rendererFactory.getZoomManager();
+      if (!this.zoomManager) {
+        this.zoomManager = new ZoomManager(canvas);
+        this.rendererFactory.initializeZoom(this.zoomManager);
+      }
+    } else {
+      // Fallback for cases without renderer factory
+      this.zoomManager = new ZoomManager(canvas);
+      if (this.renderer) {
+        this.renderer.initializeZoom(this.zoomManager);
+      }
     }
 
     // Initialize fullscreen manager
@@ -957,6 +976,8 @@ export class VisualizerControls {
 
     this.fullscreenManager.on('exit', () => {
       this.state.isFullscreen = false;
+      // Reset zoom to prevent canvas staying oversized after fullscreen exit
+      this.zoomManager?.resetZoom(false);
       this.updateFullscreenUI();
     });
   }

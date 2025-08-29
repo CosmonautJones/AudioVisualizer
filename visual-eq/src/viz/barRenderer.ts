@@ -332,8 +332,8 @@ export class BarRenderer extends BaseRenderer {
   /**
    * Dispose of resources
    */
-  dispose(): void {
-    super.dispose();
+  dispose(preserveZoomManager: boolean = false): void {
+    super.dispose(preserveZoomManager);
     this.gradient = null;
     this.barLayouts = [];
     
