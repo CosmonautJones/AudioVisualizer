@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoom and Fullscreen Test</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        .test-container { max-width: 800px; margin: 0 auto; }
+        .test-section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        h1, h2 { color: #333; }
+        .controls { display: flex; gap: 10px; margin: 20px 0; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .info { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-top: 10px; }
+        .status { font-weight: bold; color: #28a745; }
+        canvas { border: 2px solid #007bff; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔍 Audio Visualizer Zoom & Fullscreen Test</h1>
+        
+        <div class="test-section">
+            <h2>✅ Features Implemented</h2>
+            <ul>
+                <li><strong>Zoom Controls:</strong> Zoom in (50% - 300%), zoom out, reset zoom</li>
+                <li><strong>Pan Support:</strong> Click & drag to pan when zoomed in</li>
+                <li><strong>Fullscreen:</strong> Toggle fullscreen mode with proper canvas sizing</li>
+                <li><strong>Keyboard Shortcuts:</strong>
+                    <ul>
+                        <li><code>+/-</code> - Zoom in/out</li>
+                        <li><code>0</code> - Reset zoom</li>
+                        <li><code>F</code> - Toggle fullscreen</li>
+                        <li><code>Arrow keys</code> - Pan when zoomed</li>
+                        <li><code>Escape</code> - Exit fullscreen</li>
+                    </ul>
+                </li>
+                <li><strong>UI Controls:</strong> Header zoom controls + sidebar zoom slider</li>
+                <li><strong>Visual Feedback:</strong> Zoom level display, cursor changes</li>
+                <li><strong>Performance Optimizations:</strong> Viewport culling, smooth transitions</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>🎮 How to Test</h2>
+            <ol>
+                <li>Open the main audio visualizer application</li>
+                <li>Look for the new zoom controls in the header (zoom out, 100%, zoom in, reset buttons)</li>
+                <li>Find the zoom slider in the control panel</li>
+                <li>Test the fullscreen button in the header</li>
+                <li>Try the keyboard shortcuts listed above</li>
+                <li>When zoomed in, click and drag on the canvas to pan</li>
+                <li>Test with both frequency bars and mandala visualizations</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h2>🔧 Implementation Details</h2>
+            <div class="info">
+                <p><strong>New Files Added:</strong></p>
+                <ul>
+                    <li><code>src/viz/zoomManager.ts</code> - Complete zoom and pan state management</li>
+                    <li><code>src/ui/fullscreenManager.ts</code> - Cross-browser fullscreen API handling</li>
+                </ul>
+                
+                <p><strong>Files Modified:</strong></p>
+                <ul>
+                    <li><code>src/viz/baseRenderer.ts</code> - Added zoom transformation support</li>
+                    <li><code>src/viz/barRenderer.ts</code> - Zoom transforms + viewport culling</li>
+                    <li><code>src/viz/mandalaRenderer.ts</code> - Zoom transforms applied</li>
+                    <li><code>src/ui/controls.ts</code> - Integrated zoom & fullscreen controls</li>
+                    <li><code>index.html</code> - Added zoom UI controls</li>
+                    <li><code>styles.css</code> - Styled zoom controls and fullscreen modes</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Expected Behavior</h2>
+            <ul>
+                <li>Zoom controls should smoothly zoom the visualization from 50% to 300%</li>
+                <li>Pan should work when zoomed in (>100%) via mouse drag or arrow keys</li>
+                <li>Fullscreen should hide the header and expand canvas to full viewport</li>
+                <li>UI should update zoom percentage in real-time</li>
+                <li>Performance should remain at 60fps even when zoomed</li>
+                <li>All features should work with both bar and mandala visualizations</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 Test Results</h2>
+            <p class="status">✅ Implementation Complete - Ready for Testing!</p>
+            <p>Navigate to the main application to test the new zoom and fullscreen features.</p>
+            
+            <div class="controls">
+                <button onclick="window.open('/', '_blank')">🚀 Open Main App</button>
+                <button onclick="window.location.href='/'">🔄 Go to Main App</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

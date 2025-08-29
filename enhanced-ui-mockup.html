@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audio Visualizer - Enhanced UI Mockup</title>
+    <link rel="stylesheet" href="enhanced-ui.css">
+  </head>
+  <body class="dark">
+    <div id="app" class="app">
+      <!-- Header -->
+      <header class="header">
+        <h1>Audio Visualizer</h1>
+        <div class="header-controls">
+          <button id="fullscreen-btn" class="icon-button" aria-label="Toggle fullscreen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+            </svg>
+          </button>
+          <button id="settings-btn" class="icon-button" aria-label="Settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/>
+            </svg>
+          </button>
+        </div>
+        <p id="status-message" class="status"></p>
+      </header>
+
+      <!-- Control Panel -->
+      <aside class="controls" id="controls-panel">
+        <div class="controls-header">
+          <h2>Controls</h2>
+          <button id="collapse-controls" class="icon-button" aria-label="Collapse controls">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Global Controls -->
+        <section class="control-section" id="global-controls">
+          <h3 class="section-title">Audio Source</h3>
+          
+          <!-- Input Selector -->
+          <div class="control-group">
+            <div id="input-selector" class="input-selector">
+              <label class="radio-card">
+                <input type="radio" name="source" value="mic" checked />
+                <div class="radio-content">
+                  <span class="radio-icon">🎤</span>
+                  <span>Microphone</span>
+                </div>
+              </label>
+              <label class="radio-card">
+                <input type="radio" name="source" value="file" />
+                <div class="radio-content">
+                  <span class="radio-icon">📁</span>
+                  <span>Audio File</span>
+                </div>
+              </label>
+            </div>
+            
+            <!-- File Upload Area -->
+            <input type="file" id="file-input" accept="audio/*" style="display: none;" />
+            <div id="file-upload-area" class="file-upload-area" style="display: none;">
+              <div class="drag-drop-area" id="drag-drop-area">
+                <div class="upload-icon">📎</div>
+                <button id="browse-file" type="button" class="browse-button">
+                  Choose Audio File
+                </button>
+                <p class="file-hint">or drag and drop here</p>
+                <p class="file-formats">MP3, WAV, OGG, AAC, FLAC, M4A</p>
+              </div>
+            </div>
+            
+            <!-- File Info -->
+            <div id="file-info" class="file-info" style="display: none;">
+              <div class="file-details">
+                <span class="file-icon">🎵</span>
+                <div class="file-text">
+                  <span id="file-name" class="file-name"></span>
+                  <span class="file-size" id="file-size"></span>
+                </div>
+              </div>
+              <button id="change-file" type="button" class="change-file-btn">Change</button>
+            </div>
+          </div>
+
+          <!-- Global Settings -->
+          <div class="control-group">
+            <label for="sensitivity-slider">Sensitivity</label>
+            <div class="slider-container">
+              <input type="range" id="sensitivity-slider" min="0.1" max="3.0" step="0.1" value="1.0" />
+              <span class="slider-value">1.0</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label for="theme-selector">Theme</label>
+            <select id="theme-selector" class="select-input">
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+              <option value="neon">Neon</option>
+              <option value="pastel">Pastel</option>
+            </select>
+          </div>
+        </section>
+
+        <!-- Visualization Mode Selector -->
+        <section class="control-section" id="mode-selector-section">
+          <h3 class="section-title">Visualization Mode</h3>
+          
+          <div class="mode-selector" id="visualization-mode">
+            <div class="mode-options">
+              <label class="mode-option active" data-mode="bars">
+                <input type="radio" name="vis-mode" value="bars" checked />
+                <div class="mode-preview">
+                  <div class="bars-preview">
+                    <div class="bar" style="height: 60%"></div>
+                    <div class="bar" style="height: 80%"></div>
+                    <div class="bar" style="height: 40%"></div>
+                    <div class="bar" style="height: 90%"></div>
+                    <div class="bar" style="height: 30%"></div>
+                  </div>
+                </div>
+                <span class="mode-name">Bars</span>
+              </label>
+              
+              <label class="mode-option" data-mode="mandala">
+                <input type="radio" name="vis-mode" value="mandala" />
+                <div class="mode-preview">
+                  <div class="mandala-preview">
+                    <div class="mandala-ring"></div>
+                    <div class="mandala-segments">
+                      <div class="segment"></div>
+                      <div class="segment"></div>
+                      <div class="segment"></div>
+                      <div class="segment"></div>
+                    </div>
+                  </div>
+                </div>
+                <span class="mode-name">Mandala</span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bars Mode Controls -->
+        <section class="control-section mode-controls" id="bars-controls" data-mode="bars">
+          <h3 class="section-title">Bar Settings</h3>
+          
+          <div class="control-group">
+            <label for="bar-count-slider">Bar Count</label>
+            <div class="slider-container">
+              <input type="range" id="bar-count-slider" min="16" max="128" step="8" value="64" />
+              <span class="slider-value">64</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label for="bar-spacing-slider">Spacing</label>
+            <div class="slider-container">
+              <input type="range" id="bar-spacing-slider" min="0" max="10" step="1" value="2" />
+              <span class="slider-value">2px</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label for="bar-height-scale">Height Scale</label>
+            <div class="slider-container">
+              <input type="range" id="bar-height-scale" min="0.5" max="2.0" step="0.1" value="1.0" />
+              <span class="slider-value">1.0x</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Mandala Mode Controls -->
+        <section class="control-section mode-controls" id="mandala-controls" data-mode="mandala" style="display: none;">
+          <h3 class="section-title">Mandala Settings</h3>
+          
+          <div class="control-group">
+            <label for="mandala-segments">Segments</label>
+            <div class="segment-buttons">
+              <button class="segment-btn" data-segments="6">6</button>
+              <button class="segment-btn active" data-segments="8">8</button>
+              <button class="segment-btn" data-segments="12">12</button>
+              <button class="segment-btn" data-segments="16">16</button>
+              <button class="segment-btn" data-segments="24">24</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label for="rotation-speed">Rotation Speed</label>
+            <div class="slider-container">
+              <input type="range" id="rotation-speed" min="0" max="10" step="1" value="3" />
+              <span class="slider-value">3°/sec</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label for="inner-radius">Inner Radius</label>
+            <div class="slider-container">
+              <input type="range" id="inner-radius" min="10" max="80" step="5" value="30" />
+              <span class="slider-value">30%</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label for="outer-radius">Outer Radius</label>
+            <div class="slider-container">
+              <input type="range" id="outer-radius" min="60" max="100" step="5" value="90" />
+              <span class="slider-value">90%</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label>Symmetry Pattern</label>
+            <div class="symmetry-options">
+              <label class="radio-button">
+                <input type="radio" name="symmetry" value="mirror" checked />
+                <span>Mirror</span>
+              </label>
+              <label class="radio-button">
+                <input type="radio" name="symmetry" value="radial" />
+                <span>Radial</span>
+              </label>
+              <label class="radio-button">
+                <input type="radio" name="symmetry" value="kaleidoscope" />
+                <span>Kaleidoscope</span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- Color Customization -->
+        <section class="control-section" id="color-controls">
+          <h3 class="section-title collapsible" data-collapsed="true">
+            Colors
+            <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 10l5 5 5-5z"/>
+            </svg>
+          </h3>
+          
+          <div class="collapsible-content" style="display: none;">
+            <div class="control-group">
+              <label>Color Scheme</label>
+              <div class="color-scheme-grid">
+                <button class="color-scheme active" data-scheme="spectrum">
+                  <div class="scheme-preview gradient-spectrum"></div>
+                  <span>Spectrum</span>
+                </button>
+                <button class="color-scheme" data-scheme="neon">
+                  <div class="scheme-preview gradient-neon"></div>
+                  <span>Neon</span>
+                </button>
+                <button class="color-scheme" data-scheme="mono">
+                  <div class="scheme-preview gradient-mono"></div>
+                  <span>Mono</span>
+                </button>
+                <button class="color-scheme" data-scheme="custom">
+                  <div class="scheme-preview gradient-custom"></div>
+                  <span>Custom</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="control-group custom-colors" style="display: none;">
+              <label for="primary-hue">Primary Hue</label>
+              <div class="slider-container">
+                <input type="range" id="primary-hue" min="0" max="360" step="1" value="240" />
+                <span class="slider-value">240°</span>
+              </div>
+
+              <label for="saturation">Saturation</label>
+              <div class="slider-container">
+                <input type="range" id="saturation" min="0" max="100" step="5" value="80" />
+                <span class="slider-value">80%</span>
+              </div>
+
+              <label for="brightness">Brightness</label>
+              <div class="slider-container">
+                <input type="range" id="brightness" min="20" max="100" step="5" value="60" />
+                <span class="slider-value">60%</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Playback Control -->
+        <section class="control-section">
+          <div class="playback-controls">
+            <button id="playback-button" class="playback-btn primary">
+              <span class="btn-icon">🎤</span>
+              <span class="btn-text">Start</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Accessibility Panel -->
+        <section class="control-section" id="accessibility-controls">
+          <h3 class="section-title collapsible" data-collapsed="true">
+            Accessibility
+            <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 10l5 5 5-5z"/>
+            </svg>
+          </h3>
+          
+          <div class="collapsible-content" style="display: none;">
+            <div class="control-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="high-contrast" />
+                <span class="checkmark"></span>
+                High Contrast Mode
+              </label>
+            </div>
+
+            <div class="control-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="reduced-motion" />
+                <span class="checkmark"></span>
+                Reduce Motion
+              </label>
+            </div>
+
+            <div class="control-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="screen-reader" />
+                <span class="checkmark"></span>
+                Audio Descriptions
+              </label>
+            </div>
+
+            <div class="control-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="keyboard-nav" checked />
+                <span class="checkmark"></span>
+                Keyboard Navigation
+              </label>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Main Visualization Area -->
+      <main class="visualizer" id="visualizer-container">
+        <canvas id="visualizer" width="800" height="450" aria-label="Audio frequency visualization"></canvas>
+        
+        <!-- Overlay Controls -->
+        <div class="visualization-overlay">
+          <div class="performance-stats" id="performance-stats" style="display: none;">
+            <div class="stat">
+              <span class="stat-label">FPS:</span>
+              <span class="stat-value" id="fps-counter">60</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Frame:</span>
+              <span class="stat-value" id="frame-time">8ms</span>
+            </div>
+          </div>
+
+          <div class="mode-transition-indicator" id="mode-transition" style="display: none;">
+            <div class="transition-spinner"></div>
+            <span>Switching to <span id="target-mode">Mandala</span> mode...</span>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Mobile Bottom Sheet -->
+    <div class="mobile-controls" id="mobile-controls">
+      <div class="mobile-handle"></div>
+      <div class="mobile-content">
+        <div class="mobile-quick-controls">
+          <div class="quick-mode-selector">
+            <button class="mobile-mode-btn active" data-mode="bars">Bars</button>
+            <button class="mobile-mode-btn" data-mode="mandala">Mandala</button>
+          </div>
+          <div class="quick-sensitivity">
+            <label>Sensitivity</label>
+            <input type="range" id="mobile-sensitivity" min="0.1" max="3.0" step="0.1" value="1.0" />
+          </div>
+          <button id="mobile-more-settings" class="more-settings-btn">
+            More Settings
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 14l5-5 5 5z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen Reader Live Region -->
+    <div id="sr-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+    <script type="module" src="enhanced-ui-demo.js"></script>
+  </body>
+</html>

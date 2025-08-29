@@ -7,6 +7,8 @@ import { AudioEngine } from '../audio/audioEngine.ts';
 import type { AudioEngineError } from '../audio/types.ts';
 import { BaseRenderer, type Theme } from '../viz/baseRenderer.ts';
 import { VisualizationMode, type MandalaConfig, type BarConfig, ColorPalette, SymmetryMode, DEFAULT_BAR_CONFIG, DEFAULT_MANDALA_CONFIG } from '../viz/visualizationMode.ts';
+import { ZoomManager } from '../viz/zoomManager.ts';
+import { FullscreenManager } from './fullscreenManager.ts';
 
 interface ControlsState {
   inputMode: 'mic' | 'file';
@@ -18,6 +20,9 @@ interface ControlsState {
   visualizationMode: VisualizationMode;
   barConfig: BarConfig;
   mandalaConfig: MandalaConfig;
+  // Zoom and fullscreen state
+  zoomLevel: number;
+  isFullscreen: boolean;
 }
 
 export class VisualizerControls {
@@ -34,8 +39,14 @@ export class VisualizerControls {
     isLoading: false,
     visualizationMode: VisualizationMode.BARS,
     barConfig: { ...DEFAULT_BAR_CONFIG },
-    mandalaConfig: { ...DEFAULT_MANDALA_CONFIG }
+    mandalaConfig: { ...DEFAULT_MANDALA_CONFIG },
+    zoomLevel: 1.0,
+    isFullscreen: false
   };
+
+  // Zoom and fullscreen managers
+  private zoomManager: ZoomManager | null = null;
+  private fullscreenManager: FullscreenManager | null = null;
 
   // Control elements
   private inputSelector: HTMLElement | null = null;
@@ -67,6 +78,14 @@ export class VisualizerControls {
   private mandalaRotation: HTMLInputElement | null = null;
   private mandalaPalette: HTMLSelectElement | null = null;
   private mandalaSymmetry: HTMLSelectElement | null = null;
+
+  // Zoom and fullscreen controls
+  private zoomSlider: HTMLInputElement | null = null;
+  private zoomInBtn: HTMLButtonElement | null = null;
+  private zoomOutBtn: HTMLButtonElement | null = null;
+  private zoomResetBtn: HTMLButtonElement | null = null;
+  private zoomLevelText: HTMLElement | null = null;
+  private fullscreenBtn: HTMLButtonElement | null = null;
 
   /**
    * Initialize controls with audio engine, renderer, and visualization callbacks
@@ -113,11 +132,22 @@ export class VisualizerControls {
     this.mandalaPalette = document.getElementById('mandala-palette') as HTMLSelectElement;
     this.mandalaSymmetry = document.getElementById('mandala-symmetry') as HTMLSelectElement;
 
+    // Zoom and fullscreen controls
+    this.zoomSlider = document.getElementById('zoom-slider') as HTMLInputElement;
+    this.zoomInBtn = document.getElementById('zoom-in-btn') as HTMLButtonElement;
+    this.zoomOutBtn = document.getElementById('zoom-out-btn') as HTMLButtonElement;
+    this.zoomResetBtn = document.getElementById('zoom-reset-btn') as HTMLButtonElement;
+    this.zoomLevelText = document.getElementById('zoom-level-text');
+    this.fullscreenBtn = document.getElementById('fullscreen-btn') as HTMLButtonElement;
+
     // Validate critical DOM elements exist
     if (!this.inputSelector || !this.fileInput || !this.sensitivitySlider || 
         !this.themeToggle || !this.playbackButton || !this.vizModeSelector) {
       throw new Error('Critical UI elements not found - HTML structure may be incomplete');
     }
+
+    // Initialize zoom and fullscreen managers
+    this.initializeZoomAndFullscreen();
 
     // Bind all control handlers
     this.bindInputSelector();
@@ -131,6 +161,9 @@ export class VisualizerControls {
     this.bindPlaybackControl();
     this.bindFileButtons();
     this.bindDragAndDrop();
+    this.bindZoomControls();
+    this.bindFullscreenControls();
+    this.bindKeyboardShortcuts();
 
     // Initialize UI state and enable playback button for default mic selection
     this.state.isPlaying = false; // Not playing yet, but ready to start
@@ -693,11 +726,18 @@ export class VisualizerControls {
       }
     }
 
+    // Update zoom controls
+    this.updateZoomUI();
+    
+    // Update fullscreen controls  
+    this.updateFullscreenUI();
+
     // Disable controls during loading
     const allInputs = [
       this.sensitivitySlider, this.barCountSlider, this.themeToggle,
       this.vizModeSelector, this.mandalaSegments, this.mandalaRings, 
-      this.mandalaRotation, this.mandalaPalette, this.mandalaSymmetry
+      this.mandalaRotation, this.mandalaPalette, this.mandalaSymmetry,
+      this.zoomSlider
     ];
     allInputs.forEach(input => {
       if (input) input.disabled = state.isLoading;
@@ -880,5 +920,222 @@ export class VisualizerControls {
    */
   getState(): ControlsState {
     return { ...this.state };
+  }
+
+  /**
+   * Initialize zoom and fullscreen managers
+   */
+  private initializeZoomAndFullscreen(): void {
+    const canvas = document.getElementById('visualizer') as HTMLCanvasElement;
+    if (!canvas) {
+      console.warn('Canvas not found, zoom and fullscreen features will not be available');
+      return;
+    }
+
+    // Initialize zoom manager
+    this.zoomManager = new ZoomManager(canvas);
+    
+    // Initialize zoom support in renderer
+    if (this.renderer) {
+      this.renderer.initializeZoom(this.zoomManager);
+    }
+
+    // Initialize fullscreen manager
+    this.fullscreenManager = new FullscreenManager(canvas);
+    this.fullscreenManager.applyFullscreenStyles(canvas);
+
+    // Set up event listeners
+    this.zoomManager.on('zoom', (state) => {
+      this.state.zoomLevel = state.level;
+      this.updateZoomUI();
+    });
+
+    this.fullscreenManager.on('enter', () => {
+      this.state.isFullscreen = true;
+      this.updateFullscreenUI();
+    });
+
+    this.fullscreenManager.on('exit', () => {
+      this.state.isFullscreen = false;
+      this.updateFullscreenUI();
+    });
+  }
+
+  /**
+   * Bind zoom control functionality
+   */
+  private bindZoomControls(): void {
+    // Zoom slider
+    if (this.zoomSlider) {
+      this.zoomSlider.addEventListener('input', (event) => {
+        const value = parseFloat((event.target as HTMLInputElement).value);
+        this.zoomManager?.setZoom(value);
+      });
+    }
+
+    // Zoom in button
+    if (this.zoomInBtn) {
+      this.zoomInBtn.addEventListener('click', () => {
+        this.zoomManager?.zoomIn();
+      });
+    }
+
+    // Zoom out button
+    if (this.zoomOutBtn) {
+      this.zoomOutBtn.addEventListener('click', () => {
+        this.zoomManager?.zoomOut();
+      });
+    }
+
+    // Zoom reset button
+    if (this.zoomResetBtn) {
+      this.zoomResetBtn.addEventListener('click', () => {
+        this.zoomManager?.resetZoom();
+      });
+    }
+  }
+
+  /**
+   * Bind fullscreen control functionality
+   */
+  private bindFullscreenControls(): void {
+    if (this.fullscreenBtn) {
+      this.fullscreenBtn.addEventListener('click', () => {
+        this.fullscreenManager?.toggleFullscreen();
+      });
+    }
+  }
+
+  /**
+   * Bind keyboard shortcuts for zoom and fullscreen
+   */
+  private bindKeyboardShortcuts(): void {
+    document.addEventListener('keydown', (event) => {
+      // Only handle shortcuts when not typing in inputs
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      switch (event.key) {
+        case '+':
+        case '=':
+          event.preventDefault();
+          this.zoomManager?.zoomIn();
+          break;
+
+        case '-':
+        case '_':
+          event.preventDefault();
+          this.zoomManager?.zoomOut();
+          break;
+
+        case '0':
+          event.preventDefault();
+          this.zoomManager?.resetZoom();
+          break;
+
+        case 'F11':
+          // Let browser handle F11 naturally
+          break;
+
+        case 'f':
+        case 'F':
+          if (event.ctrlKey || event.metaKey) return; // Don't interfere with find
+          event.preventDefault();
+          this.fullscreenManager?.toggleFullscreen();
+          break;
+
+        case 'Escape':
+          if (this.state.isFullscreen) {
+            event.preventDefault();
+            this.fullscreenManager?.exitFullscreen();
+          }
+          break;
+      }
+    });
+
+    // Handle arrow keys for panning when zoomed
+    document.addEventListener('keydown', (event) => {
+      if (!this.zoomManager || this.state.zoomLevel <= 1.0) return;
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      const panAmount = 50;
+      let handled = false;
+
+      switch (event.key) {
+        case 'ArrowLeft':
+          this.zoomManager.adjustPan(panAmount, 0);
+          handled = true;
+          break;
+
+        case 'ArrowRight':
+          this.zoomManager.adjustPan(-panAmount, 0);
+          handled = true;
+          break;
+
+        case 'ArrowUp':
+          this.zoomManager.adjustPan(0, panAmount);
+          handled = true;
+          break;
+
+        case 'ArrowDown':
+          this.zoomManager.adjustPan(0, -panAmount);
+          handled = true;
+          break;
+      }
+
+      if (handled) {
+        event.preventDefault();
+      }
+    });
+  }
+
+  /**
+   * Update zoom-related UI elements
+   */
+  private updateZoomUI(): void {
+    const zoomPercent = Math.round(this.state.zoomLevel * 100);
+    
+    // Update zoom slider
+    if (this.zoomSlider) {
+      this.zoomSlider.value = this.state.zoomLevel.toString();
+      const valueSpan = this.zoomSlider.parentElement?.querySelector('.slider-value');
+      if (valueSpan) valueSpan.textContent = `${zoomPercent}%`;
+    }
+
+    // Update zoom level display in header
+    if (this.zoomLevelText) {
+      this.zoomLevelText.textContent = `${zoomPercent}%`;
+    }
+
+    // Update canvas cursor and classes
+    const canvas = document.getElementById('visualizer') as HTMLCanvasElement;
+    if (canvas) {
+      canvas.classList.toggle('zoom-enabled', this.state.zoomLevel > 1.0);
+    }
+  }
+
+  /**
+   * Update fullscreen-related UI elements
+   */
+  private updateFullscreenUI(): void {
+    // Update fullscreen button icon/text
+    if (this.fullscreenBtn) {
+      const svg = this.fullscreenBtn.querySelector('svg');
+      const path = svg?.querySelector('path');
+      if (path) {
+        if (this.state.isFullscreen) {
+          // Exit fullscreen icon
+          path.setAttribute('d', 'M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z');
+          this.fullscreenBtn.setAttribute('aria-label', 'Exit fullscreen');
+        } else {
+          // Enter fullscreen icon
+          path.setAttribute('d', 'M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z');
+          this.fullscreenBtn.setAttribute('aria-label', 'Enter fullscreen');
+        }
+      }
+    }
   }
 }

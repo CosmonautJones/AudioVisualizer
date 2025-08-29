@@ -6,6 +6,7 @@
 
 import type { Theme } from './themes.ts';
 import type { VisualizationConfig } from './visualizationMode.ts';
+import { ZoomManager, type ZoomState } from './zoomManager.ts';
 
 export abstract class BaseRenderer {
   protected canvas: HTMLCanvasElement | null = null;
@@ -27,6 +28,10 @@ export abstract class BaseRenderer {
   // Visual styling
   protected theme: Theme = 'dark';
   protected backgroundColor = '#000000';
+
+  // Zoom support
+  protected zoomManager: ZoomManager | null = null;
+  protected isZoomEnabled = false;
 
   /**
    * Initialize renderer with canvas element
@@ -53,6 +58,35 @@ export abstract class BaseRenderer {
       console.error('Renderer initialization failed:', error);
       return false;
     }
+  }
+
+  /**
+   * Initialize zoom support for this renderer
+   */
+  initializeZoom(zoomManager?: ZoomManager): void {
+    if (!this.canvas) {
+      console.warn('Cannot initialize zoom without canvas');
+      return;
+    }
+
+    if (zoomManager) {
+      this.zoomManager = zoomManager;
+    } else {
+      this.zoomManager = new ZoomManager(this.canvas);
+    }
+
+    this.isZoomEnabled = true;
+
+    // Listen for zoom/pan changes to trigger redraws
+    this.zoomManager.on('zoom', () => this.onZoomChange());
+    this.zoomManager.on('pan', () => this.onPanChange());
+  }
+
+  /**
+   * Get zoom manager instance
+   */
+  getZoomManager(): ZoomManager | null {
+    return this.zoomManager;
   }
 
   /**
@@ -101,7 +135,7 @@ export abstract class BaseRenderer {
   }
 
   /**
-   * Clear canvas with background color
+   * Clear canvas with background color, accounting for zoom
    */
   protected clearCanvas(): void {
     if (!this.ctx) return;
@@ -109,8 +143,54 @@ export abstract class BaseRenderer {
     const displayWidth = this.canvasWidth / (this.dpr || 1);
     const displayHeight = this.canvasHeight / (this.dpr || 1);
 
+    // Save context before clearing
+    this.ctx.save();
+    
+    // Reset transform for clearing
+    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    
     this.ctx.fillStyle = this.backgroundColor;
     this.ctx.fillRect(0, 0, displayWidth, displayHeight);
+    
+    // Restore context
+    this.ctx.restore();
+  }
+
+  /**
+   * Apply zoom transformation to canvas context
+   */
+  protected applyZoomTransform(): void {
+    if (!this.ctx || !this.zoomManager || !this.isZoomEnabled) return;
+    
+    this.zoomManager.applyTransform(this.ctx);
+  }
+
+  /**
+   * Get viewport bounds when zoomed
+   */
+  protected getViewportBounds(): { left: number, top: number, right: number, bottom: number, width: number, height: number } {
+    if (!this.zoomManager || !this.isZoomEnabled) {
+      const displayWidth = this.canvasWidth / (this.dpr || 1);
+      const displayHeight = this.canvasHeight / (this.dpr || 1);
+      return { 
+        left: 0, 
+        top: 0, 
+        right: displayWidth, 
+        bottom: displayHeight, 
+        width: displayWidth, 
+        height: displayHeight 
+      };
+    }
+
+    return this.zoomManager.getViewportBounds();
+  }
+
+  /**
+   * Check if a point is visible in the current viewport
+   */
+  protected isPointVisible(x: number, y: number): boolean {
+    const bounds = this.getViewportBounds();
+    return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
   }
 
   /**
@@ -186,12 +266,31 @@ export abstract class BaseRenderer {
   protected abstract onThemeChange(): void;
 
   /**
+   * Template methods for zoom support
+   */
+  protected onZoomChange(): void {
+    // Default implementation - subclasses can override
+    // This could trigger a redraw or update cached values
+  }
+
+  protected onPanChange(): void {
+    // Default implementation - subclasses can override
+    // This could trigger a redraw or update cached values
+  }
+
+  /**
    * Dispose of resources
    */
   dispose(): void {
+    if (this.zoomManager) {
+      this.zoomManager.dispose();
+      this.zoomManager = null;
+    }
+    
     this.canvas = null;
     this.ctx = null;
     this.fpsHistory = [];
     this.frameCount = 0;
+    this.isZoomEnabled = false;
   }
 }

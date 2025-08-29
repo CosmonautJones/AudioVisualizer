@@ -122,7 +122,19 @@ export class MandalaRenderer extends BaseRenderer {
 
       this.updateAnimation();
       this.clearCanvas();
-      this.drawMandala(frequencyData);
+      
+      // Save context state for zoom transformation
+      if (this.ctx) {
+        this.ctx.save();
+        
+        // Apply zoom transformation if enabled
+        this.applyZoomTransform();
+        
+        this.drawMandala(frequencyData);
+        
+        // Restore context state
+        this.ctx.restore();
+      }
     });
   }
 

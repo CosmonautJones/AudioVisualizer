@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandala Performance Analysis</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 8px;
+        }
+        canvas {
+            border: 1px solid #444;
+            margin: 10px;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        label {
+            font-size: 12px;
+            color: #ccc;
+        }
+        input, select, button {
+            padding: 5px 10px;
+            border: 1px solid #555;
+            background: #333;
+            color: white;
+            border-radius: 4px;
+        }
+        button {
+            cursor: pointer;
+            background: #0066cc;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .metric {
+            background: #333;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff88;
+        }
+        .metric-label {
+            font-size: 14px;
+            color: #ccc;
+            margin-top: 5px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.running {
+            background: #2a4a8a;
+            border-left: 4px solid #4a8aff;
+        }
+        .status.complete {
+            background: #2a8a4a;
+            border-left: 4px solid #4aff8a;
+        }
+        .results {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .test-canvas-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mandala Renderer Performance Analysis</h1>
+        
+        <div class="test-section">
+            <h2>Live Performance Comparison</h2>
+            <div class="comparison">
+                <div class="test-canvas-container">
+                    <h3>Bar Renderer</h3>
+                    <canvas id="barCanvas" width="400" height="300"></canvas>
+                    <div id="barMetrics" class="metrics">
+                        <div class="metric">
+                            <div id="barFPS" class="metric-value">--</div>
+                            <div class="metric-label">FPS</div>
+                        </div>
+                        <div class="metric">
+                            <div id="barFrameTime" class="metric-value">--</div>
+                            <div class="metric-label">Frame Time (ms)</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="test-canvas-container">
+                    <h3>Mandala Renderer</h3>
+                    <canvas id="mandalaCanvas" width="400" height="300"></canvas>
+                    <div id="mandalaMetrics" class="metrics">
+                        <div class="metric">
+                            <div id="mandalaFPS" class="metric-value">--</div>
+                            <div class="metric-label">FPS</div>
+                        </div>
+                        <div class="metric">
+                            <div id="mandalaFrameTime" class="metric-value">--</div>
+                            <div class="metric-label">Frame Time (ms)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="startTest">Start Performance Test</button>
+                <button id="stopTest">Stop Test</button>
+                <div class="control-group">
+                    <label>Test Duration (seconds)</label>
+                    <input type="number" id="testDuration" value="10" min="5" max="60">
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Mandala Configuration Testing</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label>Segments</label>
+                    <input type="range" id="segments" min="8" max="64" value="32">
+                    <span id="segmentsValue">32</span>
+                </div>
+                <div class="control-group">
+                    <label>Rings</label>
+                    <input type="range" id="rings" min="3" max="8" value="4">
+                    <span id="ringsValue">4</span>
+                </div>
+                <div class="control-group">
+                    <label>Color Palette</label>
+                    <select id="colorPalette">
+                        <option value="aurora">Aurora</option>
+                        <option value="solar">Solar</option>
+                        <option value="crystal">Crystal</option>
+                        <option value="psychedelic">Psychedelic</option>
+                        <option value="monochrome">Monochrome</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Symmetry Mode</label>
+                    <select id="symmetryMode">
+                        <option value="none">None</option>
+                        <option value="mirror-x">Mirror X</option>
+                        <option value="mirror-y">Mirror Y</option>
+                        <option value="radial-2x">Radial 2x</option>
+                        <option value="radial-4x">Radial 4x</option>
+                        <option value="radial-8x">Radial 8x</option>
+                        <option value="kaleidoscope">Kaleidoscope</option>
+                    </select>
+                </div>
+                <button id="applyConfig">Apply Configuration</button>
+                <button id="runConfigTest">Run Performance Test</button>
+            </div>
+            
+            <div id="configTestResults" class="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Bottleneck Analysis</h2>
+            <div class="controls">
+                <button id="profilePolarCoords">Profile Polar Calculations</button>
+                <button id="profileGradients">Profile Gradient Generation</button>
+                <button id="profileCanvasOps">Profile Canvas Operations</button>
+                <button id="profileSymmetry">Profile Symmetry Effects</button>
+            </div>
+            <div id="bottleneckResults" class="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Adaptive Quality Scaling Test</h2>
+            <div class="controls">
+                <button id="testAdaptiveQuality">Test Adaptive Scaling</button>
+                <div class="control-group">
+                    <label>Target FPS</label>
+                    <input type="number" id="targetFPS" value="60" min="30" max="120">
+                </div>
+                <div class="control-group">
+                    <label>Load Simulation</label>
+                    <select id="loadSimulation">
+                        <option value="light">Light (60 FPS)</option>
+                        <option value="medium">Medium (45 FPS)</option>
+                        <option value="heavy">Heavy (30 FPS)</option>
+                        <option value="extreme">Extreme (15 FPS)</option>
+                    </select>
+                </div>
+            </div>
+            <div id="adaptiveResults" class="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Mode Transition Testing</h2>
+            <div class="controls">
+                <button id="testModeTransitions">Test Mode Transitions</button>
+                <div class="control-group">
+                    <label>Transition Frequency (ms)</label>
+                    <input type="number" id="transitionFrequency" value="2000" min="500" max="5000">
+                </div>
+                <div class="control-group">
+                    <label>Test Cycles</label>
+                    <input type="number" id="testCycles" value="10" min="5" max="50">
+                </div>
+            </div>
+            <div id="transitionResults" class="results"></div>
+        </div>
+
+        <div id="testStatus" class="status" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        // Performance testing framework for Mandala Renderer
+        let isTestRunning = false;
+        let testResults = [];
+        
+        // Mock renderers for testing (simplified versions)
+        class MockBarRenderer {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.lastFrameTime = 0;
+                this.frameCount = 0;
+                this.fpsHistory = [];
+            }
+            
+            render(frequencyData) {
+                const startTime = performance.now();
+                
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                const barWidth = this.canvas.width / 64;
+                const gradient = this.ctx.createLinearGradient(0, this.canvas.height, 0, 0);
+                gradient.addColorStop(0, '#1e3a8a');
+                gradient.addColorStop(0.5, '#10b981');
+                gradient.addColorStop(1, '#ef4444');
+                
+                this.ctx.fillStyle = gradient;
+                
+                for (let i = 0; i < 64; i++) {
+                    const value = frequencyData[i] || Math.random() * 255;
+                    const height = (value / 255) * this.canvas.height * 0.9;
+                    const x = i * barWidth;
+                    const y = this.canvas.height - height;
+                    
+                    this.ctx.fillRect(x, y, barWidth - 1, height);
+                }
+                
+                this.lastFrameTime = performance.now() - startTime;
+                this.updateFPS();
+            }
+            
+            updateFPS() {
+                this.frameCount++;
+                if (this.frameCount % 10 === 0) {
+                    const fps = 1000 / Math.max(this.lastFrameTime, 1);
+                    this.fpsHistory.push(fps);
+                    if (this.fpsHistory.length > 60) {
+                        this.fpsHistory.shift();
+                    }
+                }
+            }
+            
+            getAverageFPS() {
+                return this.fpsHistory.length > 0 
+                    ? this.fpsHistory.reduce((a, b) => a + b, 0) / this.fpsHistory.length 
+                    : 0;
+            }
+        }
+        
+        class MockMandalaRenderer {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.config = {
+                    segments: 32,
+                    rings: 4,
+                    colorPalette: 'aurora',
+                    symmetryMode: 'none',
+                    rotationSpeed: 2.0
+                };
+                this.lastFrameTime = 0;
+                this.frameCount = 0;
+                this.fpsHistory = [];
+                this.rotation = 0;
+                this.gradientCache = new Map();
+            }
+            
+            render(frequencyData) {
+                const startTime = performance.now();
+                
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+                const maxRadius = Math.min(centerX, centerY) * 0.9;
+                const minRadius = maxRadius * 0.2;
+                
+                this.rotation += 0.02;
+                
+                // Draw mandala rings with polar calculations
+                for (let ring = 0; ring < this.config.rings; ring++) {
+                    const ringRadius = minRadius + (ring * (maxRadius - minRadius) / this.config.rings);
+                    
+                    for (let i = 0; i < this.config.segments; i++) {
+                        const angle = (i / this.config.segments) * Math.PI * 2 + this.rotation;
+                        const freqIndex = Math.floor((i / this.config.segments) * frequencyData.length);
+                        const magnitude = (frequencyData[freqIndex] || Math.random() * 255) / 255;
+                        
+                        const x = centerX + Math.cos(angle) * ringRadius;
+                        const y = centerY + Math.sin(angle) * ringRadius;
+                        
+                        this.ctx.fillStyle = this.getColor(ring, magnitude);
+                        this.ctx.beginPath();
+                        this.ctx.arc(x, y, magnitude * 5 + 2, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+                }
+                
+                // Apply symmetry effect (simplified)
+                if (this.config.symmetryMode !== 'none') {
+                    this.applySymmetry();
+                }
+                
+                this.lastFrameTime = performance.now() - startTime;
+                this.updateFPS();
+            }
+            
+            getColor(ring, magnitude) {
+                const palettes = {
+                    aurora: ['#1e3a8a', '#3b82f6', '#06b6d4', '#10b981', '#6366f1'],
+                    solar: ['#dc2626', '#ea580c', '#f59e0b', '#eab308', '#fbbf24'],
+                    crystal: ['#ffffff', '#e0e7ff', '#c7d2fe', '#a5b4fc', '#8b5cf6'],
+                    psychedelic: ['#ff0080', '#ff8000', '#80ff00', '#00ff80', '#0080ff'],
+                    monochrome: ['#1f2937', '#374151', '#6b7280', '#9ca3af', '#d1d5db']
+                };
+                
+                const colors = palettes[this.config.colorPalette] || palettes.aurora;
+                const colorIndex = Math.floor(magnitude * (colors.length - 1));
+                return colors[colorIndex];
+            }
+            
+            applySymmetry() {
+                // Simplified symmetry effect
+                this.ctx.save();
+                this.ctx.globalCompositeOperation = 'screen';
+                this.ctx.globalAlpha = 0.3;
+                this.ctx.scale(-1, 1);
+                this.ctx.translate(-this.canvas.width, 0);
+                this.ctx.drawImage(this.canvas, 0, 0);
+                this.ctx.restore();
+            }
+            
+            updateFPS() {
+                this.frameCount++;
+                if (this.frameCount % 10 === 0) {
+                    const fps = 1000 / Math.max(this.lastFrameTime, 1);
+                    this.fpsHistory.push(fps);
+                    if (this.fpsHistory.length > 60) {
+                        this.fpsHistory.shift();
+                    }
+                }
+            }
+            
+            getAverageFPS() {
+                return this.fpsHistory.length > 0 
+                    ? this.fpsHistory.reduce((a, b) => a + b, 0) / this.fpsHistory.length 
+                    : 0;
+            }
+            
+            updateConfig(config) {
+                this.config = { ...this.config, ...config };
+            }
+        }
+        
+        // Initialize renderers
+        const barCanvas = document.getElementById('barCanvas');
+        const mandalaCanvas = document.getElementById('mandalaCanvas');
+        const barRenderer = new MockBarRenderer(barCanvas);
+        const mandalaRenderer = new MockMandalaRenderer(mandalaCanvas);
+        
+        // Generate mock frequency data
+        function generateFrequencyData() {
+            const data = new Uint8Array(1024);
+            for (let i = 0; i < data.length; i++) {
+                data[i] = Math.random() * 255 * (1 - i / data.length);
+            }
+            return data;
+        }
+        
+        // Update UI metrics
+        function updateMetrics() {
+            document.getElementById('barFPS').textContent = Math.round(barRenderer.getAverageFPS());
+            document.getElementById('barFrameTime').textContent = barRenderer.lastFrameTime.toFixed(2);
+            document.getElementById('mandalaFPS').textContent = Math.round(mandalaRenderer.getAverageFPS());
+            document.getElementById('mandalaFrameTime').textContent = mandalaRenderer.lastFrameTime.toFixed(2);
+        }
+        
+        // Main render loop
+        function renderLoop() {
+            if (isTestRunning) {
+                const frequencyData = generateFrequencyData();
+                barRenderer.render(frequencyData);
+                mandalaRenderer.render(frequencyData);
+                updateMetrics();
+                requestAnimationFrame(renderLoop);
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('startTest').addEventListener('click', () => {
+            isTestRunning = true;
+            renderLoop();
+            document.getElementById('testStatus').textContent = 'Performance test running...';
+            document.getElementById('testStatus').className = 'status running';
+            document.getElementById('testStatus').style.display = 'block';
+        });
+        
+        document.getElementById('stopTest').addEventListener('click', () => {
+            isTestRunning = false;
+            document.getElementById('testStatus').textContent = 'Performance test stopped';
+            document.getElementById('testStatus').className = 'status complete';
+        });
+        
+        // Configuration controls
+        document.getElementById('segments').addEventListener('input', (e) => {
+            document.getElementById('segmentsValue').textContent = e.target.value;
+        });
+        
+        document.getElementById('rings').addEventListener('input', (e) => {
+            document.getElementById('ringsValue').textContent = e.target.value;
+        });
+        
+        document.getElementById('applyConfig').addEventListener('click', () => {
+            const config = {
+                segments: parseInt(document.getElementById('segments').value),
+                rings: parseInt(document.getElementById('rings').value),
+                colorPalette: document.getElementById('colorPalette').value,
+                symmetryMode: document.getElementById('symmetryMode').value
+            };
+            mandalaRenderer.updateConfig(config);
+        });
+        
+        document.getElementById('runConfigTest').addEventListener('click', async () => {
+            const results = document.getElementById('configTestResults');
+            results.textContent = 'Running configuration performance test...\n';
+            
+            const configs = [
+                { segments: 8, rings: 3, label: 'Low complexity' },
+                { segments: 16, rings: 4, label: 'Medium-low complexity' },
+                { segments: 32, rings: 4, label: 'Medium complexity' },
+                { segments: 48, rings: 6, label: 'High complexity' },
+                { segments: 64, rings: 8, label: 'Very high complexity' }
+            ];
+            
+            for (const config of configs) {
+                mandalaRenderer.updateConfig(config);
+                
+                // Run test for 2 seconds
+                const testFrames = [];
+                const testDuration = 2000;
+                const startTime = Date.now();
+                
+                while (Date.now() - startTime < testDuration) {
+                    const frameStart = performance.now();
+                    const frequencyData = generateFrequencyData();
+                    mandalaRenderer.render(frequencyData);
+                    const frameTime = performance.now() - frameStart;
+                    testFrames.push(frameTime);
+                    await new Promise(resolve => requestAnimationFrame(resolve));
+                }
+                
+                const avgFrameTime = testFrames.reduce((a, b) => a + b, 0) / testFrames.length;
+                const avgFPS = 1000 / avgFrameTime;
+                const maxFrameTime = Math.max(...testFrames);
+                const minFPS = 1000 / maxFrameTime;
+                
+                results.textContent += `${config.label} (${config.segments}s/${config.rings}r):\n`;
+                results.textContent += `  Avg FPS: ${avgFPS.toFixed(1)} | Min FPS: ${minFPS.toFixed(1)}\n`;
+                results.textContent += `  Avg Frame Time: ${avgFrameTime.toFixed(2)}ms | Max: ${maxFrameTime.toFixed(2)}ms\n`;
+                results.textContent += `  Performance: ${avgFPS >= 55 ? 'GOOD' : avgFPS >= 30 ? 'OK' : 'POOR'}\n\n`;
+            }
+        });
+        
+        // Bottleneck analysis
+        document.getElementById('profilePolarCoords').addEventListener('click', () => {
+            const results = document.getElementById('bottleneckResults');
+            results.textContent = 'Profiling polar coordinate calculations...\n';
+            
+            const iterations = 100000;
+            const segments = 64;
+            const rings = 8;
+            
+            // Profile Math.sin/cos operations
+            console.time('Polar coordinates');
+            const start = performance.now();
+            
+            for (let i = 0; i < iterations; i++) {
+                for (let s = 0; s < segments; s++) {
+                    for (let r = 0; r < rings; r++) {
+                        const angle = (s / segments) * Math.PI * 2;
+                        const radius = r * 10;
+                        const x = Math.cos(angle) * radius;
+                        const y = Math.sin(angle) * radius;
+                    }
+                }
+            }
+            
+            const elapsed = performance.now() - start;
+            console.timeEnd('Polar coordinates');
+            
+            results.textContent += `Polar coordinate calculations:\n`;
+            results.textContent += `  ${iterations * segments * rings} calculations in ${elapsed.toFixed(2)}ms\n`;
+            results.textContent += `  ${((iterations * segments * rings) / elapsed * 1000).toFixed(0)} calculations/second\n`;
+            results.textContent += `  ${(elapsed / (iterations * segments * rings) * 1000000).toFixed(3)} microseconds per calculation\n\n`;
+        });
+        
+        // Initialize with a basic test
+        setTimeout(() => {
+            document.getElementById('startTest').click();
+        }, 1000);
+    </script>
+</body>
+</html>

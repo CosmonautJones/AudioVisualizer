@@ -55,10 +55,21 @@ export class BarRenderer extends BaseRenderer {
 
       this.clearCanvas();
       
-      if (this.visualMode === 'standard') {
-        this.drawEnhancedBars(frequencyData);
-      } else {
-        this.drawBarsWithEffects(frequencyData);
+      // Save context state
+      if (this.ctx) {
+        this.ctx.save();
+        
+        // Apply zoom transformation if enabled
+        this.applyZoomTransform();
+        
+        if (this.visualMode === 'standard') {
+          this.drawEnhancedBars(frequencyData);
+        } else {
+          this.drawBarsWithEffects(frequencyData);
+        }
+        
+        // Restore context state
+        this.ctx.restore();
       }
     });
   }
@@ -127,6 +138,11 @@ export class BarRenderer extends BaseRenderer {
     // Render bars with individual colors based on mode
     for (let i = 0; i < this.barLayouts.length; i++) {
       const bar = this.barLayouts[i];
+      
+      // Skip bars outside viewport when zoomed (performance optimization)
+      if (this.isZoomEnabled && !this.isPointVisible(bar.x, displayHeight / 2)) {
+        continue;
+      }
       
       // Get frequency value for this bar (logarithmic mapping)
       const freqValue = frequencyData[bar.logFreqIndex] || 0;

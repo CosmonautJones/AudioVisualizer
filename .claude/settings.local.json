@@ -1,4 +1,8 @@
 {
+  "statusLine": {
+    "type": "command",
+    "command": ".claude/statusline-command.sh"
+  },
   "permissions": {
     "allow": [
       "Bash(pwd)",
@@ -18,7 +22,8 @@
       "mcp_ide_writeFile",
       "mcp__ide__getDiagnostics",
       "Bash(git log:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "mcp__context7__get-library-docs"
     ],
     "deny": [
       "Bash(sudo:*)",

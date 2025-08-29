@@ -62,6 +62,10 @@
   /* Layout */
   --sidebar-width: 320px;
   --header-height: 60px;
+  
+  /* Zoom Controls */
+  --zoom-control-gap: 0.5rem;
+  --zoom-display-width: 4rem;
 }
 
 /* Dark Theme - Futuristic Purple */
@@ -1588,6 +1592,152 @@ input[type="range"]:focus::-moz-range-thumb {
   .visualizer {
     padding: var(--space-sm);
   }
+}
+
+/* Zoom Controls */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--zoom-control-gap);
+  background: var(--bg-elevated);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-right: var(--space-md);
+}
+
+.zoom-level-display {
+  min-width: var(--zoom-display-width);
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-coral);
+  background: var(--bg-interactive);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
+  transition: all var(--transition-fast);
+}
+
+.zoom-controls:hover .zoom-level-display {
+  background: var(--bg-interactive-hover);
+  transform: scale(1.05);
+}
+
+.zoom-controls .icon-button {
+  width: 32px;
+  height: 32px;
+  font-size: 0.875rem;
+}
+
+.zoom-controls .icon-button:hover {
+  transform: translateY(-1px) scale(1.1);
+  box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+}
+
+/* Fullscreen Styles */
+.app:-webkit-full-screen {
+  grid-template-rows: 0 1fr;
+}
+
+.app:-moz-full-screen {
+  grid-template-rows: 0 1fr;
+}
+
+.app:fullscreen {
+  grid-template-rows: 0 1fr;
+}
+
+/* Fullscreen canvas specific styles */
+.visualizer:-webkit-full-screen #visualizer,
+.visualizer:-moz-full-screen #visualizer,
+.visualizer:fullscreen #visualizer {
+  width: 100vw !important;
+  height: 100vh !important;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+}
+
+/* Zoom-specific cursor changes */
+#visualizer {
+  cursor: default;
+  transition: cursor var(--transition-fast);
+}
+
+#visualizer.zoom-enabled {
+  cursor: grab;
+}
+
+#visualizer.zoom-enabled:active,
+#visualizer.zoom-dragging {
+  cursor: grabbing;
+}
+
+/* Zoom transition animations */
+.zoom-transition {
+  transition: transform var(--transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mobile zoom controls adjustments */
+@media (max-width: 768px) {
+  .zoom-controls {
+    flex-wrap: wrap;
+    padding: var(--space-xs);
+  }
+  
+  .zoom-controls .icon-button {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .zoom-level-display {
+    min-width: 3rem;
+    font-size: 0.7rem;
+  }
+}
+
+/* Performance indicator for zoom */
+.performance-monitor {
+  position: absolute;
+  bottom: var(--space-md);
+  right: var(--space-md);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  font-family: monospace;
+  font-size: 0.75rem;
+  display: flex;
+  gap: var(--space-md);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-primary);
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+  pointer-events: none;
+}
+
+.performance-monitor:hover {
+  opacity: 1;
+}
+
+.fps-counter,
+.render-time {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.label {
+  color: var(--text-muted);
+}
+
+#fps-value,
+#render-time {
+  color: var(--accent-coral);
+  font-weight: 600;
 }
 
 /* High Contrast Mode */
