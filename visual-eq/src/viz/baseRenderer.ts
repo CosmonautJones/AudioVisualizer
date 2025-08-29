@@ -157,32 +157,30 @@ export abstract class BaseRenderer {
   }
 
   /**
-   * Apply zoom transformation to canvas context
+   * Apply zoom transformation to canvas context (deprecated - now using canvas resize)
    */
   protected applyZoomTransform(): void {
-    if (!this.ctx || !this.zoomManager || !this.isZoomEnabled) return;
-    
-    this.zoomManager.applyTransform(this.ctx);
+    // No longer needed - zoom is handled by resizing the canvas element
+    // This method is kept for compatibility but does nothing
   }
 
   /**
    * Get viewport bounds when zoomed
    */
   protected getViewportBounds(): { left: number, top: number, right: number, bottom: number, width: number, height: number } {
-    if (!this.zoomManager || !this.isZoomEnabled) {
-      const displayWidth = this.canvasWidth / (this.dpr || 1);
-      const displayHeight = this.canvasHeight / (this.dpr || 1);
-      return { 
-        left: 0, 
-        top: 0, 
-        right: displayWidth, 
-        bottom: displayHeight, 
-        width: displayWidth, 
-        height: displayHeight 
-      };
-    }
-
-    return this.zoomManager.getViewportBounds();
+    const displayWidth = this.canvasWidth / (this.dpr || 1);
+    const displayHeight = this.canvasHeight / (this.dpr || 1);
+    
+    // Since we're now resizing the canvas instead of using transforms,
+    // viewport bounds are simply the canvas dimensions
+    return { 
+      left: 0, 
+      top: 0, 
+      right: displayWidth, 
+      bottom: displayHeight, 
+      width: displayWidth, 
+      height: displayHeight 
+    };
   }
 
   /**

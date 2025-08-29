@@ -4,7 +4,7 @@
  */
 
 export interface ZoomState {
-  level: number;      // 0.5 to 3.0 (50% to 300%)
+  level: number;      // 0.5 to 3.0 (50% to 300%) - canvas size multiplier
   panX: number;       // Pan offset in canvas coordinates
   panY: number;       // Pan offset in canvas coordinates
   isDragging: boolean; // Currently dragging for pan
@@ -44,6 +44,8 @@ export class ZoomManager {
   };
 
   private canvas: HTMLCanvasElement | null = null;
+  private originalWidth: number = 800;
+  private originalHeight: number = 450;
   private animationId: number = 0;
   private transitionStartTime = 0;
   private transitionStartState: Partial<ZoomState> = {};
@@ -71,6 +73,12 @@ export class ZoomManager {
    */
   initialize(canvas: HTMLCanvasElement): void {
     this.canvas = canvas;
+    
+    // Store original canvas dimensions
+    const rect = canvas.getBoundingClientRect();
+    this.originalWidth = rect.width;
+    this.originalHeight = rect.height;
+    
     this.setupEventListeners();
   }
 
@@ -115,6 +123,7 @@ export class ZoomManager {
       this.animateToZoom(clampedLevel);
     } else {
       this.state.level = clampedLevel;
+      this.resizeCanvas();
       this.emit('zoom', this.state);
     }
   }
@@ -143,6 +152,7 @@ export class ZoomManager {
       this.state.level = 1.0;
       this.state.panX = 0;
       this.state.panY = 0;
+      this.resizeCanvas();
       this.emit('zoom', this.state);
       this.emit('pan', this.state);
     }
@@ -215,19 +225,21 @@ export class ZoomManager {
   }
 
   /**
-   * Apply zoom transformation to canvas context
+   * Resize canvas element based on zoom level
    */
-  applyTransform(ctx: CanvasRenderingContext2D): void {
+  resizeCanvas(): void {
     if (!this.canvas) return;
 
-    const rect = this.canvas.getBoundingClientRect();
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-
-    // Apply transformations in the correct order
-    ctx.translate(centerX + this.state.panX, centerY + this.state.panY);
-    ctx.scale(this.state.level, this.state.level);
-    ctx.translate(-centerX, -centerY);
+    const newWidth = this.originalWidth * this.state.level;
+    const newHeight = this.originalHeight * this.state.level;
+    
+    // Update canvas element style dimensions
+    this.canvas.style.width = `${newWidth}px`;
+    this.canvas.style.height = `${newHeight}px`;
+    
+    // Trigger resize event for renderer to update internal dimensions
+    const resizeEvent = new Event('resize');
+    window.dispatchEvent(resizeEvent);
   }
 
   /**
@@ -381,6 +393,11 @@ export class ZoomManager {
         (this.state as any)[key] = currentValue;
       });
 
+      // Update canvas size during animation if zoom level changed
+      if ('level' in this.transitionTargetState) {
+        this.resizeCanvas();
+      }
+      
       // Emit appropriate events
       if ('level' in this.transitionTargetState) {
         this.emit('zoom', this.state);

@@ -323,18 +323,15 @@ h1, h2, h3, h4, h5, h6 {
 .status {
   font-size: 0.875rem;
   color: var(--text-muted);
-  position: absolute;
-  right: var(--space-lg);
-  top: 50%;
-  transform: translateY(-50%);
-  margin-right: 140px;
   background: var(--bg-elevated);
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-primary);
   backdrop-filter: blur(10px);
   font-weight: 500;
-  z-index: 2;
+  white-space: nowrap;
+  margin-left: var(--space-md);
+  flex-shrink: 0;
 }
 
 .status-error { color: var(--accent-error); }
