@@ -41,6 +41,10 @@ export class MandalaRenderer extends BaseRenderer {
   // Visual elements
   private centerGradient: CanvasGradient | null = null;
   private ringGradients: CanvasGradient[] = [];
+  
+  // Off-screen buffer for symmetry effects
+  private offscreenCanvas: HTMLCanvasElement | null = null;
+  private offscreenContext: CanvasRenderingContext2D | null = null;
 
   constructor() {
     super();
@@ -58,6 +62,55 @@ export class MandalaRenderer extends BaseRenderer {
       glowIntensity: 0.6,
       pulseReactivity: 0.8
     };
+  }
+
+  /**
+   * Initialize renderer with off-screen canvas for symmetry effects
+   */
+  initialize(canvas: HTMLCanvasElement): boolean {
+    if (!super.initialize(canvas)) {
+      return false;
+    }
+
+    // Create off-screen canvas for symmetry effects
+    this.setupOffscreenCanvas();
+    
+    return true;
+  }
+
+  /**
+   * Set up off-screen canvas buffer
+   */
+  private setupOffscreenCanvas(): void {
+    if (!this.canvas) return;
+
+    // Create off-screen canvas with same dimensions as main canvas
+    this.offscreenCanvas = document.createElement('canvas');
+    this.offscreenContext = this.offscreenCanvas.getContext('2d', {
+      alpha: false,
+      desynchronized: true
+    });
+
+    if (!this.offscreenContext) {
+      console.warn('MandalaRenderer: Failed to create off-screen context');
+      return;
+    }
+
+    // Match main canvas dimensions
+    this.updateOffscreenCanvasSize();
+  }
+
+  /**
+   * Update off-screen canvas to match main canvas size
+   */
+  private updateOffscreenCanvasSize(): void {
+    if (!this.offscreenCanvas || !this.offscreenContext || !this.canvas) return;
+
+    this.offscreenCanvas.width = this.canvas.width;
+    this.offscreenCanvas.height = this.canvas.height;
+    
+    // Scale context to match device pixel ratio
+    this.offscreenContext.scale(this.dpr, this.dpr);
   }
 
   /**
@@ -96,7 +149,42 @@ export class MandalaRenderer extends BaseRenderer {
   private drawMandala(frequencyData: Uint8Array): void {
     if (!this.ctx) return;
 
-    const ctx = this.ctx;
+    // If symmetry is enabled and off-screen canvas is available, use buffer approach
+    if (this.config.symmetryMode !== 'none' && this.offscreenContext && this.offscreenCanvas) {
+      this.drawMandalaWithSymmetry(frequencyData);
+    } else {
+      // Draw directly to main canvas for 'none' symmetry mode
+      this.drawBaseMandala(this.ctx, frequencyData);
+    }
+  }
+
+  /**
+   * Draw mandala with symmetry effects using off-screen buffer
+   */
+  private drawMandalaWithSymmetry(frequencyData: Uint8Array): void {
+    if (!this.ctx || !this.offscreenContext || !this.offscreenCanvas) return;
+
+    // Clear off-screen canvas
+    this.offscreenContext.fillStyle = this.backgroundColor;
+    this.offscreenContext.fillRect(0, 0, this.offscreenCanvas.width / this.dpr, this.offscreenCanvas.height / this.dpr);
+
+    // Draw base mandala to off-screen canvas
+    this.drawBaseMandala(this.offscreenContext, frequencyData);
+
+    // Clear main canvas
+    this.clearCanvas();
+
+    // Draw the base mandala from buffer to main canvas
+    this.ctx.drawImage(this.offscreenCanvas, 0, 0);
+
+    // Apply symmetry effects using the buffer
+    this.applySymmetryEffect(this.ctx);
+  }
+
+  /**
+   * Draw the base mandala without symmetry effects
+   */
+  private drawBaseMandala(ctx: CanvasRenderingContext2D, frequencyData: Uint8Array): void {
     const maxRadius = Math.min(this.centerX, this.centerY) * this.config.outerRadius;
     const minRadius = Math.min(this.centerX, this.centerY) * this.config.innerRadius;
     const ringWidth = (maxRadius - minRadius) / this.config.rings;
@@ -113,11 +201,6 @@ export class MandalaRenderer extends BaseRenderer {
       const nextRingRadius = minRadius + ((ring + 1) * ringWidth);
       
       this.drawRing(ctx, frequencyData, ring, ringRadius, nextRingRadius);
-    }
-
-    // Apply symmetry effects
-    if (this.config.symmetryMode !== 'none') {
-      this.applySymmetryEffect(ctx);
     }
 
     // Reset shadow
@@ -224,15 +307,17 @@ export class MandalaRenderer extends BaseRenderer {
    * Apply mirror-X symmetry
    */
   private applyMirrorX(ctx: CanvasRenderingContext2D): void {
-    if (!this.canvas) {
-      console.warn('MandalaRenderer: Canvas not available for mirror-X effect');
+    if (!this.offscreenCanvas) {
+      console.warn('MandalaRenderer: Off-screen canvas not available for mirror-X effect');
       return;
     }
+
     ctx.save();
     ctx.scale(-1, 1);
     ctx.translate(-this.centerX * 2, 0);
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(this.canvas, 0, 0);
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = 0.8; // Blend the mirrored copy
+    ctx.drawImage(this.offscreenCanvas, 0, 0);
     ctx.restore();
   }
 
@@ -240,15 +325,17 @@ export class MandalaRenderer extends BaseRenderer {
    * Apply mirror-Y symmetry
    */
   private applyMirrorY(ctx: CanvasRenderingContext2D): void {
-    if (!this.canvas) {
-      console.warn('MandalaRenderer: Canvas not available for mirror-Y effect');
+    if (!this.offscreenCanvas) {
+      console.warn('MandalaRenderer: Off-screen canvas not available for mirror-Y effect');
       return;
     }
+
     ctx.save();
     ctx.scale(1, -1);
     ctx.translate(0, -this.centerY * 2);
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(this.canvas, 0, 0);
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = 0.8; // Blend the mirrored copy
+    ctx.drawImage(this.offscreenCanvas, 0, 0);
     ctx.restore();
   }
 
@@ -256,8 +343,8 @@ export class MandalaRenderer extends BaseRenderer {
    * Apply radial symmetry
    */
   private applyRadialSymmetry(ctx: CanvasRenderingContext2D): void {
-    if (!this.canvas) {
-      console.warn('MandalaRenderer: Canvas not available for radial symmetry effect');
+    if (!this.offscreenCanvas) {
+      console.warn('MandalaRenderer: Off-screen canvas not available for radial symmetry effect');
       return;
     }
     
@@ -274,8 +361,8 @@ export class MandalaRenderer extends BaseRenderer {
       ctx.translate(this.centerX, this.centerY);
       ctx.rotate(rotationStep * i);
       ctx.translate(-this.centerX, -this.centerY);
-      ctx.globalAlpha = 0.7;
-      ctx.drawImage(this.canvas, 0, 0);
+      ctx.globalAlpha = 0.6; // Slightly reduce alpha for better blending
+      ctx.drawImage(this.offscreenCanvas, 0, 0);
       ctx.restore();
     }
     
@@ -286,23 +373,26 @@ export class MandalaRenderer extends BaseRenderer {
    * Apply kaleidoscope effect
    */
   private applyKaleidoscope(ctx: CanvasRenderingContext2D): void {
-    if (!this.canvas) {
-      console.warn('MandalaRenderer: Canvas not available for kaleidoscope effect');
+    if (!this.offscreenCanvas) {
+      console.warn('MandalaRenderer: Off-screen canvas not available for kaleidoscope effect');
       return;
     }
     
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
-    ctx.globalAlpha = 0.5;
     
-    // Create multiple rotated copies
-    for (let i = 1; i < 6; i++) {
+    // Create multiple rotated and scaled copies for kaleidoscope effect
+    const copies = 6;
+    const baseAlpha = 0.4;
+    
+    for (let i = 1; i < copies; i++) {
       ctx.save();
       ctx.translate(this.centerX, this.centerY);
-      ctx.rotate((Math.PI * 2 / 6) * i);
-      ctx.scale(0.8, 0.8);
+      ctx.rotate((Math.PI * 2 / copies) * i);
+      ctx.scale(0.85, 0.85); // Slightly larger scale for better effect
       ctx.translate(-this.centerX, -this.centerY);
-      ctx.drawImage(this.canvas, 0, 0);
+      ctx.globalAlpha = baseAlpha * (1 - i / copies * 0.3); // Fade each copy
+      ctx.drawImage(this.offscreenCanvas, 0, 0);
       ctx.restore();
     }
     
@@ -402,6 +492,7 @@ export class MandalaRenderer extends BaseRenderer {
   protected onResize(): void {
     this.calculateSegments();
     this.clearGradientCache();
+    this.updateOffscreenCanvasSize();
   }
 
   /**
@@ -460,5 +551,9 @@ export class MandalaRenderer extends BaseRenderer {
     this.gradientCache.clear();
     this.centerGradient = null;
     this.ringGradients = [];
+    
+    // Clean up off-screen canvas resources
+    this.offscreenCanvas = null;
+    this.offscreenContext = null;
   }
 }
