@@ -34,6 +34,9 @@ class AudioVisualizerApp {
         throw new Error('Failed to initialize renderer factory');
       }
 
+      // Set up visualization mode switching BEFORE initializing controls
+      this.setupModeSwitch();
+      
       // Initialize the default renderer
       const renderer = this.rendererFactory.getRenderer(this.currentConfig.mode);
       
@@ -49,9 +52,6 @@ class AudioVisualizerApp {
       window.addEventListener('resize', () => {
         this.rendererFactory.resize();
       });
-
-      // Set up visualization mode switching
-      this.setupModeSwitch();
 
       // Show ready message
       this.showStatus('Click "Start" to begin with microphone or select "Audio File" to upload');

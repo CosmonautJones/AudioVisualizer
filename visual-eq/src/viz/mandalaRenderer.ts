@@ -224,11 +224,15 @@ export class MandalaRenderer extends BaseRenderer {
    * Apply mirror-X symmetry
    */
   private applyMirrorX(ctx: CanvasRenderingContext2D): void {
+    if (!this.canvas) {
+      console.warn('MandalaRenderer: Canvas not available for mirror-X effect');
+      return;
+    }
     ctx.save();
     ctx.scale(-1, 1);
     ctx.translate(-this.centerX * 2, 0);
     ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(this.canvas!, 0, 0);
+    ctx.drawImage(this.canvas, 0, 0);
     ctx.restore();
   }
 
@@ -236,11 +240,15 @@ export class MandalaRenderer extends BaseRenderer {
    * Apply mirror-Y symmetry
    */
   private applyMirrorY(ctx: CanvasRenderingContext2D): void {
+    if (!this.canvas) {
+      console.warn('MandalaRenderer: Canvas not available for mirror-Y effect');
+      return;
+    }
     ctx.save();
     ctx.scale(1, -1);
     ctx.translate(0, -this.centerY * 2);
     ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(this.canvas!, 0, 0);
+    ctx.drawImage(this.canvas, 0, 0);
     ctx.restore();
   }
 
@@ -248,6 +256,11 @@ export class MandalaRenderer extends BaseRenderer {
    * Apply radial symmetry
    */
   private applyRadialSymmetry(ctx: CanvasRenderingContext2D): void {
+    if (!this.canvas) {
+      console.warn('MandalaRenderer: Canvas not available for radial symmetry effect');
+      return;
+    }
+    
     const divisions = this.config.symmetryMode === 'radial-2x' ? 2 : 
                      this.config.symmetryMode === 'radial-4x' ? 4 : 8;
     
@@ -262,7 +275,7 @@ export class MandalaRenderer extends BaseRenderer {
       ctx.rotate(rotationStep * i);
       ctx.translate(-this.centerX, -this.centerY);
       ctx.globalAlpha = 0.7;
-      ctx.drawImage(this.canvas!, 0, 0);
+      ctx.drawImage(this.canvas, 0, 0);
       ctx.restore();
     }
     
@@ -273,6 +286,11 @@ export class MandalaRenderer extends BaseRenderer {
    * Apply kaleidoscope effect
    */
   private applyKaleidoscope(ctx: CanvasRenderingContext2D): void {
+    if (!this.canvas) {
+      console.warn('MandalaRenderer: Canvas not available for kaleidoscope effect');
+      return;
+    }
+    
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
     ctx.globalAlpha = 0.5;
@@ -284,7 +302,7 @@ export class MandalaRenderer extends BaseRenderer {
       ctx.rotate((Math.PI * 2 / 6) * i);
       ctx.scale(0.8, 0.8);
       ctx.translate(-this.centerX, -this.centerY);
-      ctx.drawImage(this.canvas!, 0, 0);
+      ctx.drawImage(this.canvas, 0, 0);
       ctx.restore();
     }
     
@@ -301,7 +319,13 @@ export class MandalaRenderer extends BaseRenderer {
       return this.gradientCache.get(cacheKey)!;
     }
 
-    if (!this.ctx) return this.ctx as any;
+    if (!this.ctx) {
+      console.error('MandalaRenderer: Canvas context not available for gradient creation');
+      // Return a dummy gradient that won't cause crashes
+      const dummyCanvas = document.createElement('canvas');
+      const dummyCtx = dummyCanvas.getContext('2d')!;
+      return dummyCtx.createRadialGradient(0, 0, 0, 0, 0, 1);
+    }
 
     const gradient = this.ctx.createRadialGradient(
       this.centerX, this.centerY, 0,

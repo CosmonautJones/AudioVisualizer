@@ -16,6 +16,8 @@ export interface VisualizationConfig {
 
 export interface BarConfig extends VisualizationConfig {
   barCount: number;
+  colorMode?: 'theme' | 'frequency' | 'rainbow' | 'amplitude'; // Optional color mode
+  visualMode?: 'standard' | 'wave' | 'mirror' | '3d' | 'peak-hold'; // Optional visual mode
 }
 
 export interface MandalaConfig extends VisualizationConfig {
@@ -54,7 +56,9 @@ export const DEFAULT_BAR_CONFIG: BarConfig = {
   mode: VisualizationMode.BARS,
   theme: 'dark',
   sensitivity: 1.0,
-  barCount: 64
+  barCount: 64,
+  colorMode: 'theme', // Default to theme-based colors
+  visualMode: 'standard' // Default to standard bars
 };
 
 export const DEFAULT_MANDALA_CONFIG: MandalaConfig = {
